@@ -1,0 +1,9 @@
+[package]
+name = "projectname"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+gtk = "0.18.1"
+glib = "0.20.2"
+rand = "0.8.5"
