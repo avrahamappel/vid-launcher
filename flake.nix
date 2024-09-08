@@ -2,10 +2,6 @@
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,12 +9,10 @@
   };
 
   outputs =
-    { self
-    , flake-utils
-    , naersk
+    { flake-utils
     , nixpkgs
     , fenix
-    ,
+    , ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -27,24 +21,11 @@
           inherit system;
           overlays = [ fenix.overlays.default ];
         };
-
-        buildInputs = with pkgs; [ glib gtk3 ];
-
-        nativeBuildInputs = with pkgs; [
-          pkg-config
-        ];
-
-        naersk' = pkgs.callPackage naersk { };
       in
-      rec {
-        defaultPackage = naersk'.buildPackage {
-          src = ./.;
-          inherit buildInputs nativeBuildInputs;
-        };
+      {
+        defaultPackage = (pkgs.callPackage ./. { });
 
         devShell = pkgs.mkShell {
-          inherit buildInputs;
-
           nativeBuildInputs = with pkgs; [
             alejandra
             rust-analyzer
@@ -55,7 +36,10 @@
               "rustc"
               "rustfmt"
             ])
-          ] ++ nativeBuildInputs;
+            glib
+            gtk3
+            pkg-config
+          ];
         };
       }
     );
