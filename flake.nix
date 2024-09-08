@@ -34,13 +34,12 @@
           pkg-config
         ];
 
-        naersk' = pkgs.callPackage naersk {
-          inherit buildInputs nativeBuildInputs;
-        };
+        naersk' = pkgs.callPackage naersk { };
       in
       rec {
         defaultPackage = naersk'.buildPackage {
           src = ./.;
+          inherit buildInputs nativeBuildInputs;
         };
 
         devShell = pkgs.mkShell {
