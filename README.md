@@ -26,7 +26,7 @@ cargo install --git https://github.com/avrahamappel/vid-launcher
 ### Using Nix Flakes
 
 ```bash
-cargo install --git https://github.com/avrahamappel/vid-launcher
+nix run github:avrahamappel/vid-launcher
 ```
 
 ## Usage
