@@ -11,7 +11,7 @@ fn main() {
 
     // Create the main window
     let window = Window::new(WindowType::Toplevel);
-    window.set_title("Vid Launcher");
+    window.set_title(include_str!("./title").trim());
     window.set_default_size(300, 400);
 
     // Create a vertical box to hold buttons

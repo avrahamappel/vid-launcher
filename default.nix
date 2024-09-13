@@ -28,7 +28,7 @@ rustPlatform.buildRustPackage rec {
   desktopItems = [
     (makeDesktopItem {
       name = pname;
-      desktopName = "Vid Launcher";
+      desktopName = builtins.readFile src/title;
       exec = pname;
       icon = "video-x-generic";
       terminal = false;
