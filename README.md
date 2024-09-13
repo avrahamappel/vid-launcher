@@ -1,4 +1,4 @@
-# Rust Video Player
+# Random Video Launcher
 
 A simple GUI application written in Rust that allows users to play random video files from subdirectories within their `~/Videos` directory.
 
