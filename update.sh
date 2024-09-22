@@ -1,5 +1,4 @@
-#!/usr/bin/env nix-shell
-#! nix-shell -p cargo bash -i bash
+#!/usr/bin/env bash
 
 # Update flake
 nix flake update
