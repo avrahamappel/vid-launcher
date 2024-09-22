@@ -1,5 +1,5 @@
-#!/usr/bin/env nix
-#! nix develop
+#!/usr/bin/env nix-shell
+#! nix-shell -p cargo bash -i bash
 
 # Update flake
 nix flake update
