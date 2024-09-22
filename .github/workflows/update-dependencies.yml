@@ -18,6 +18,7 @@ jobs:
 
       - name: Run update script
         run: |
+          chmod +x update.sh
           ./update.sh
 
       - name: Create Pull Request
