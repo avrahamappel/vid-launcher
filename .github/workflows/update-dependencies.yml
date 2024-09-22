@@ -15,15 +15,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@latest
 
       - name: Set up Nix
-        uses: cachix/install-nix-action@v22
+        uses: cachix/install-nix-action@latest
 
       - name: Run update script
         run: nix develop --command ./update.sh
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@latest
         with:
           title: "Update dependencies"
