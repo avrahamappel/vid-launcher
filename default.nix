@@ -16,7 +16,7 @@ rustPlatform.buildRustPackage rec {
 
   src = ./.;
 
-  cargoHash = "sha256-kHj2OKuDeCTotW1PHqEwzRjvZCaKDzfdTThFu5ftNYE=";
+  cargoHash = "sha256-zZxtlAvPHlLwdgQIXb4p+66KxNUlv/4q4uTnGhMsnNs=";
 
   buildInputs = [ glib gtk3 ];
 
