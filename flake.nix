@@ -2,16 +2,17 @@
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    naersk.url = "github:nix-community/naersk";
+    naersk.inputs.nixpkgs.follows = "nixpkgs";
+    fenix.url = "github:nix-community/fenix";
+    fenix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
     { flake-utils
     , nixpkgs
     , fenix
+    , naersk
     , ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -21,9 +22,13 @@
           inherit system;
           overlays = [ fenix.overlays.default ];
         };
+
+        naersk' = pkgs.callPackage naersk {};
       in
       {
-        defaultPackage = (pkgs.callPackage ./. { });
+        defaultPackage = (pkgs.callPackage ./. {
+          naersk = naersk';
+        });
 
         devShell = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
