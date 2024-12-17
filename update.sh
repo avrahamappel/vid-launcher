@@ -14,5 +14,5 @@ if ! output="$(nix build --no-link |& tee /dev/tty)"; then
     new_hash="$(echo "$output" | awk '/got:/ {print $2}')"
     echo "Updating Cargo dependencies hash to [$new_hash]"
 
-    sed -i "s/cargoHash = \".*\";/cargoHash = \"$new_hash\";/" default.nix
+    sed -i "s#cargoHash = \".*\";#cargoHash = \"$new_hash\";#" default.nix
 fi
