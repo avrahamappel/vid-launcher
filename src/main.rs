@@ -41,11 +41,25 @@ fn main() -> glib::ExitCode {
             for dir in directories {
                 let dir_clone = dir.clone();
                 let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
-                button.set_vexpand(true);
+                button.set_hexpand(true);
                 button.connect_clicked(move |_| {
                     play_random_video(&dir_clone);
                 });
-                vbox.append(&button);
+
+                // Create a smaller button for opening the folder
+                let folder_button = Button::with_label("📁");
+                folder_button.set_size_request(30, 30);
+                let dir_clone = dir.clone();
+                folder_button.connect_clicked(move |_| {
+                    open_folder(&dir_clone);
+                });
+
+                // Create a horizontal box to hold the main button and the folder button
+                let hbox = Box::new(gtk::Orientation::Horizontal, 5);
+                hbox.append(&button);
+                hbox.append(&folder_button);
+
+                vbox.append(&hbox);
             }
         }
 
@@ -86,4 +100,17 @@ fn play_random_video(directory: &PathBuf) {
                 .expect("Failed to open video file.");
         }
     }
+}
+
+fn open_folder(directory: &PathBuf) {
+    let cmd = if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    };
+
+    Command::new(cmd)
+        .arg(directory)
+        .spawn()
+        .expect("Failed to open folder.");
 }
