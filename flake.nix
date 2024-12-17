@@ -37,7 +37,7 @@
               "rustfmt"
             ])
             glib
-            gtk3
+            gtk4
             pkg-config
           ];
         };

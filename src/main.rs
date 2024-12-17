@@ -1,61 +1,60 @@
 use gtk::prelude::*;
-use gtk::{Box, Button, Window, WindowType};
+use gtk::{Application, ApplicationWindow, Box, Button};
 use rand::seq::SliceRandom;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-fn main() {
+fn main() -> glib::ExitCode {
     // Initialize GTK
-    gtk::init().expect("Failed to initialize GTK.");
+    let application = Application::builder().build();
 
-    // Create the main window
-    let window = Window::new(WindowType::Toplevel);
-    window.set_title(include_str!("./title").trim());
-    window.set_default_size(300, 400);
+    application.connect_activate(|app| {
+        // Create the main window
+        let window = ApplicationWindow::builder()
+            .application(app)
+            .title(include_str!("./title").trim())
+            .default_width(300)
+            .default_height(400)
+            .build();
 
-    // Create a vertical box to hold buttons
-    let vbox = Box::new(gtk::Orientation::Vertical, 5);
-    window.add(&vbox);
+        // Create a vertical box to hold buttons
+        let vbox = Box::new(gtk::Orientation::Vertical, 5);
+        window.set_child(Some(&vbox));
 
-    // Get the user's Videos directory from the $HOME environment variable
-    let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
-    let videos_dir = PathBuf::from(home_dir).join("Videos");
+        // Get the user's Videos directory from the $HOME environment variable
+        let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
+        let videos_dir = PathBuf::from(home_dir).join("Videos");
 
-    // Read subdirectories in the Videos directory
-    if let Ok(entries) = fs::read_dir(videos_dir) {
-        let mut directories: Vec<PathBuf> = Vec::new();
+        // Read subdirectories in the Videos directory
+        if let Ok(entries) = fs::read_dir(videos_dir) {
+            let mut directories: Vec<PathBuf> = Vec::new();
 
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if path.is_dir() {
-                directories.push(path);
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if path.is_dir() {
+                    directories.push(path);
+                }
+            }
+
+            // Create buttons for each directory
+            for dir in directories {
+                let dir_clone = dir.clone();
+                let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
+                button.set_vexpand(true);
+                button.connect_clicked(move |_| {
+                    play_random_video(&dir_clone);
+                });
+                vbox.append(&button);
             }
         }
 
-        // Create buttons for each directory
-        for dir in directories {
-            let dir_clone = dir.clone();
-            let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
-            button.connect_clicked(move |_| {
-                play_random_video(&dir_clone);
-            });
-            vbox.pack_start(&button, true, true, 0);
-        }
-    }
-
-    // Show all widgets
-    window.show_all();
-
-    // Connect the window's close event
-    window.connect_delete_event(|_, _| {
-        gtk::main_quit();
-        // This indicates that the event should not be propagated further
-        false.into()
+        // Show all widgets
+        window.show();
     });
 
     // Start the GTK main loop
-    gtk::main();
+    application.run()
 }
 
 fn play_random_video(directory: &PathBuf) {

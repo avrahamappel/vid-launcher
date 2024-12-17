@@ -1,6 +1,6 @@
 { copyDesktopItems
 , glib
-, gtk3
+, gtk4
 , makeDesktopItem
 , pkg-config
 , rustPlatform
@@ -18,7 +18,7 @@ rustPlatform.buildRustPackage rec {
 
   cargoHash = "sha256-UQ44AmD9SG0HrggoSlYzgYnrPZuMZ672U4aNy0dbRSY=";
 
-  buildInputs = [ glib gtk3 ];
+  buildInputs = [ glib gtk4 ];
 
   nativeBuildInputs = [
     pkg-config
