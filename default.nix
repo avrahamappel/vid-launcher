@@ -28,7 +28,7 @@ rustPlatform.buildRustPackage rec {
   desktopItems = [
     (makeDesktopItem {
       name = pname;
-      desktopName = builtins.readFile src/title;
+      desktopName = builtins.readFile src/title.txt;
       exec = pname;
       icon = "video-x-generic";
       terminal = false;

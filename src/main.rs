@@ -13,7 +13,7 @@ fn main() -> glib::ExitCode {
         // Create the main window
         let window = ApplicationWindow::builder()
             .application(app)
-            .title(include_str!("./title").trim())
+            .title(include_str!("./title.txt").trim())
             .default_width(300)
             .default_height(400)
             .build();
