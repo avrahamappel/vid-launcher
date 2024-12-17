@@ -685,7 +685,7 @@ checksum = "852e951cb7832cb45cb1169900d19760cfa39b82bc0ea9c0e5a14ae88411c98b"
 
 [[package]]
 name = "vid-launcher"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "glib",
  "gtk4",
