@@ -1,9 +1,10 @@
-use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Box, Button};
-use rand::seq::SliceRandom;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Box, Button};
+use rand::prelude::*;
 
 fn main() -> glib::ExitCode {
     // Initialize GTK
@@ -87,7 +88,7 @@ fn play_random_video(directory: &PathBuf) {
             .collect();
 
         // Play a random video file if available
-        if let Some(random_video) = video_files.choose(&mut rand::thread_rng()) {
+        if let Some(random_video) = video_files.choose(&mut rand::rng()) {
             let cmd = if cfg!(target_os = "macos") {
                 "open"
             } else {
