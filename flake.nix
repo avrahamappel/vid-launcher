@@ -44,6 +44,7 @@
             glib
             gtk4
             pkg-config
+            cargo-bump
           ];
         };
       }
