@@ -24,6 +24,10 @@
         };
 
         naersk' = pkgs.callPackage naersk {};
+
+        cargoDeps = pkgs.rustPlatform.importCargoLock {
+          lockFile = ./Cargo.lock;
+        };
       in
       {
         defaultPackage = (pkgs.callPackage ./. {
@@ -31,8 +35,9 @@
         });
 
         devShell = pkgs.mkShell {
+          inherit cargoDeps;
           nativeBuildInputs = with pkgs; [
-            alejandra
+            rustPlatform.cargoSetupHook
             rust-analyzer
             (pkgs.fenix.stable.withComponents [
               "cargo"
