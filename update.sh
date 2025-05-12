@@ -9,4 +9,5 @@ cargo update
 # Update patch version if dependencies changed
 if [[ -n "$(git diff --name-only)" ]]; then
   cargo bump patch
+  cargo check # So the change will propagate to Cargo.lock
 fi
