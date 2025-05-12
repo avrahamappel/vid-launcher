@@ -3,16 +3,23 @@
 , gtk4
 , makeDesktopItem
 , pkg-config
-, naersk
+, rustPlatform
 }:
 
 let
   cargoData = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-  binaryName = cargoData.package.name;
+  inherit (cargoData.package) name version;
 in
 
-naersk.buildPackage {
+rustPlatform.buildRustPackage {
+  pname = name;
+  inherit version;
+
   src = ./.;
+
+  cargoDeps = rustPlatform.importCargoLock {
+    lockFile = ./Cargo.lock;
+  };
 
   buildInputs = [ glib gtk4 ];
 
@@ -23,9 +30,9 @@ naersk.buildPackage {
 
   desktopItems = [
     (makeDesktopItem {
-      name = binaryName;
+      name = name;
       desktopName = builtins.readFile src/title.txt;
-      exec = binaryName;
+      exec = name;
       icon = "video-x-generic";
       terminal = false;
       categories = [ "AudioVideo" "Player" ];

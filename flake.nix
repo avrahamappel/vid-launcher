@@ -2,8 +2,6 @@
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    naersk.url = "github:nix-community/naersk";
-    naersk.inputs.nixpkgs.follows = "nixpkgs";
     fenix.url = "github:nix-community/fenix";
     fenix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -12,27 +10,22 @@
     { flake-utils
     , nixpkgs
     , fenix
-    , naersk
     , ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = (import nixpkgs) {
+        pkgs = import nixpkgs {
           inherit system;
           overlays = [ fenix.overlays.default ];
         };
-
-        naersk' = pkgs.callPackage naersk {};
 
         cargoDeps = pkgs.rustPlatform.importCargoLock {
           lockFile = ./Cargo.lock;
         };
       in
       {
-        defaultPackage = (pkgs.callPackage ./. {
-          naersk = naersk';
-        });
+        defaultPackage = pkgs.callPackage ./. { };
 
         devShell = pkgs.mkShell {
           inherit cargoDeps;
