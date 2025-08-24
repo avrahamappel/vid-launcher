@@ -1,10 +1,65 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box, Button};
 use rand::prelude::*;
+
+fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
+    match fs::read_dir(path) {
+        Ok(entries) => entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.is_dir())
+            .collect(),
+        Err(_) => vec![],
+    }
+}
+
+fn get_video_files(directory: &Path) -> Vec<PathBuf> {
+    match fs::read_dir(directory) {
+        Ok(entries) => entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| {
+                p.is_file()
+                    && p.extension()
+                        .is_some_and(|ext| ext == "mp4" || ext == "mkv" || ext == "avi")
+            })
+            .collect(),
+        Err(_) => vec![],
+    }
+}
+
+fn get_open_command() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    }
+}
+
+fn play_random_video(directory: &Path) {
+    let video_files = get_video_files(directory);
+    if let Some(random_video) = video_files.choose(&mut rand::rng()) {
+        let cmd = get_open_command();
+
+        Command::new(cmd)
+            .arg(random_video)
+            .spawn()
+            .expect("Failed to open video file.");
+    }
+}
+
+fn open_folder(directory: &PathBuf) {
+    let cmd = get_open_command();
+
+    Command::new(cmd)
+        .arg(directory)
+        .spawn()
+        .expect("Failed to open folder.");
+}
 
 fn main() -> glib::ExitCode {
     // Initialize GTK
@@ -27,41 +82,30 @@ fn main() -> glib::ExitCode {
         let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
         let videos_dir = PathBuf::from(home_dir).join("Videos");
 
-        // Read subdirectories in the Videos directory
-        if let Ok(entries) = fs::read_dir(videos_dir) {
-            let mut directories: Vec<PathBuf> = Vec::new();
+        let directories = get_subdirectories(&videos_dir);
 
-            for entry in entries.filter_map(Result::ok) {
-                let path = entry.path();
-                if path.is_dir() {
-                    directories.push(path);
-                }
-            }
+        for dir in directories {
+            let dir_clone = dir.clone();
+            let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
+            button.set_hexpand(true);
+            button.connect_clicked(move |_| {
+                play_random_video(&dir_clone);
+            });
 
-            // Create buttons for each directory
-            for dir in directories {
-                let dir_clone = dir.clone();
-                let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
-                button.set_hexpand(true);
-                button.connect_clicked(move |_| {
-                    play_random_video(&dir_clone);
-                });
+            // Create a smaller button for opening the folder
+            let folder_button = Button::with_label("📁");
+            folder_button.set_size_request(30, 30);
+            let dir_clone = dir.clone();
+            folder_button.connect_clicked(move |_| {
+                open_folder(&dir_clone);
+            });
 
-                // Create a smaller button for opening the folder
-                let folder_button = Button::with_label("📁");
-                folder_button.set_size_request(30, 30);
-                let dir_clone = dir.clone();
-                folder_button.connect_clicked(move |_| {
-                    open_folder(&dir_clone);
-                });
+            // Create a horizontal box to hold the main button and the folder button
+            let hbox = Box::new(gtk::Orientation::Horizontal, 5);
+            hbox.append(&button);
+            hbox.append(&folder_button);
 
-                // Create a horizontal box to hold the main button and the folder button
-                let hbox = Box::new(gtk::Orientation::Horizontal, 5);
-                hbox.append(&button);
-                hbox.append(&folder_button);
-
-                vbox.append(&hbox);
-            }
+            vbox.append(&hbox);
         }
 
         // Show all widgets
@@ -72,46 +116,57 @@ fn main() -> glib::ExitCode {
     application.run()
 }
 
-fn play_random_video(directory: &PathBuf) {
-    // Read video files in the directory
-    if let Ok(entries) = fs::read_dir(directory) {
-        let video_files: Vec<PathBuf> = entries
-            .filter_map(Result::ok)
-            // TODO filter non-video files
-            //.filter(|entry| {
-            //    let path = entry.path();
-            //    path.is_file() && path.extension().map_or(false, |ext| {
-            //        ext == "mp4" || ext == "mkv" || ext == "avi" // Add more extensions as needed
-            //    })
-            //})
-            .map(|entry| entry.path())
-            .collect();
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
 
-        // Play a random video file if available
-        if let Some(random_video) = video_files.choose(&mut rand::rng()) {
-            let cmd = if cfg!(target_os = "macos") {
-                "open"
-            } else {
-                "xdg-open"
-            };
+    use tempfile::tempdir;
 
-            Command::new(cmd)
-                .arg(random_video)
-                .spawn()
-                .expect("Failed to open video file.");
-        }
+    use super::*;
+
+    #[test]
+    fn test_get_subdirectories_empty() {
+        let dir = tempdir().unwrap();
+        let subs = get_subdirectories(dir.path());
+        assert_eq!(subs.len(), 0);
     }
-}
 
-fn open_folder(directory: &PathBuf) {
-    let cmd = if cfg!(target_os = "macos") {
-        "open"
-    } else {
-        "xdg-open"
-    };
+    #[test]
+    fn test_get_subdirectories_nonempty() {
+        let dir = tempdir().unwrap();
+        let subdir_path = dir.path().join("subdir");
+        fs::create_dir(&subdir_path).unwrap();
+        let subs = get_subdirectories(dir.path());
+        assert!(subs.contains(&subdir_path));
+    }
 
-    Command::new(cmd)
-        .arg(directory)
-        .spawn()
-        .expect("Failed to open folder.");
+    #[test]
+    fn test_get_video_files_filtering() {
+        let dir = tempdir().unwrap();
+        let f1 = dir.path().join("a.mp4");
+        let f2 = dir.path().join("b.mkv");
+        let f3 = dir.path().join("c.txt");
+        File::create(&f1).unwrap();
+        File::create(&f2).unwrap();
+        File::create(&f3).unwrap();
+
+        let videos = get_video_files(dir.path());
+        assert!(videos.contains(&f1));
+        assert!(videos.contains(&f2));
+        assert!(!videos.contains(&f3));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn test_get_open_command() {
+        let cmd = get_open_command();
+        assert!(cmd == "open");
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn test_get_open_command() {
+        let cmd = get_open_command();
+        assert!(cmd == "xdg-open");
+    }
 }
