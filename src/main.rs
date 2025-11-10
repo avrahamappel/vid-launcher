@@ -18,14 +18,23 @@ fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
 }
 
 fn get_video_files(directory: &Path) -> Vec<PathBuf> {
+    let extensions = ["mp4", "mkv", "avi", "webm"];
+
     match fs::read_dir(directory) {
         Ok(entries) => entries
             .filter_map(Result::ok)
-            .map(|e| e.path())
+            .flat_map(|e| {
+                if e.path().is_dir() {
+                    get_video_files(&e.path())
+                } else {
+                    vec![e.path()]
+                }
+            })
             .filter(|p| {
                 p.is_file()
                     && p.extension()
-                        .is_some_and(|ext| ext == "mp4" || ext == "mkv" || ext == "avi")
+                        .and_then(|e| e.to_str())
+                        .is_some_and(|ext| extensions.contains(&ext))
             })
             .collect(),
         Err(_) => vec![],
@@ -118,7 +127,7 @@ fn main() -> glib::ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
+    use std::fs::{DirBuilder, File};
 
     use tempfile::tempdir;
 
@@ -146,14 +155,21 @@ mod tests {
         let f1 = dir.path().join("a.mp4");
         let f2 = dir.path().join("b.mkv");
         let f3 = dir.path().join("c.txt");
+        DirBuilder::new()
+            .recursive(true)
+            .create(dir.path().join("subdir"))
+            .unwrap();
+        let f4 = dir.path().join("subdir/d.webm");
         File::create(&f1).unwrap();
         File::create(&f2).unwrap();
         File::create(&f3).unwrap();
+        File::create(&f4).unwrap();
 
         let videos = get_video_files(dir.path());
         assert!(videos.contains(&f1));
         assert!(videos.contains(&f2));
         assert!(!videos.contains(&f3));
+        assert!(videos.contains(&f4));
     }
 
     #[cfg(target_os = "macos")]
