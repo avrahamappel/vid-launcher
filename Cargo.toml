@@ -1,6 +1,6 @@
 [package]
 name = "vid-launcher"
-version = "2.3.11"
+version = "2.3.12"
 edition = "2024"
 
 [dependencies]
