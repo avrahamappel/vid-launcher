@@ -2,7 +2,7 @@ name: Update dependencies
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # At 00:00 on Sunday
+    - cron: '0 0 1 * *'  # At 00:00 on first day of month
   workflow_dispatch:  # Allows manual triggering of the workflow
 
 permissions:
