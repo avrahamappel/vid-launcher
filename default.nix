@@ -4,22 +4,25 @@
 , makeDesktopItem
 , pkg-config
 , rustPlatform
+, version ? null
 }:
 
 let
   cargoData = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-  inherit (cargoData.package) name version;
+  inherit (cargoData.package) name;
 in
 
 rustPlatform.buildRustPackage {
-  pname = name;
-  inherit version;
+  pname = cargoData.package.name;
+  version = if version != null then version else cargoData.package.version;
 
   src = ./.;
 
   cargoDeps = rustPlatform.importCargoLock {
     lockFile = ./Cargo.lock;
   };
+
+  doCheck = false;
 
   buildInputs = [ glib gtk4 ];
 

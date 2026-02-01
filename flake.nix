@@ -5,7 +5,8 @@
   };
 
   outputs =
-    { flake-utils
+    { self
+    , flake-utils
     , nixpkgs
     , ...
     }:
@@ -16,22 +17,20 @@
           inherit system;
         };
       in
-      {
-        defaultPackage = pkgs.callPackage ./. { };
+      rec {
+        defaultPackage = pkgs.callPackage ./. {
+          version = if self ? shortRev then self.shortRev else "dirty";
+        };
 
         devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [
-            rust-analyzer
-            glib
-            gtk4
-            pkg-config
-            cargo-bump
+          packages = with pkgs; [
+            bacon
             cargo
             clippy
             rustc
             rustfmt
-            bacon
-          ];
+            rust-analyzer
+          ] ++ (with defaultPackage; buildInputs ++ nativeBuildInputs);
         };
       }
     );
