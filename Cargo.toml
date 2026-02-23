@@ -4,7 +4,7 @@ version = "2.3.20"
 edition = "2024"
 
 [dependencies]
-glib = "0.21.0"
+glib = "0.22.0"
 rand = "0.10.0"
 
 [dependencies.gtk]
