@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 
-use gtk::prelude::*;
+use gtk::{prelude::*, Spinner, Widget};
 use gtk::{Application, ApplicationWindow, Box, Button};
 use rand::prelude::*;
 
@@ -49,25 +49,31 @@ fn get_open_command() -> &'static str {
     }
 }
 
-fn play_random_video(directory: &Path) {
+#[must_use]
+fn play_random_video(directory: &Path) -> Option<Child> {
     let video_files = get_video_files(directory);
     if let Some(random_video) = video_files.choose(&mut rand::rng()) {
         let cmd = get_open_command();
 
-        Command::new(cmd)
-            .arg(random_video)
-            .spawn()
-            .expect("Failed to open video file.");
+        Some(
+            Command::new(cmd)
+                .arg(random_video)
+                .spawn()
+                .expect("Failed to open video file."),
+        )
+    } else {
+        None
     }
 }
 
-fn open_folder(directory: &PathBuf) {
+#[must_use]
+fn open_folder(directory: &PathBuf) -> Child {
     let cmd = get_open_command();
 
     Command::new(cmd)
         .arg(directory)
         .spawn()
-        .expect("Failed to open folder.");
+        .expect("Failed to open folder.")
 }
 
 fn main() -> glib::ExitCode {
@@ -94,19 +100,34 @@ fn main() -> glib::ExitCode {
         let directories = get_subdirectories(&videos_dir);
 
         for dir in directories {
-            let dir_clone = dir.clone();
             let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
             button.set_hexpand(true);
+            let btn_clone = button.clone();
+            let dir_clone = dir.clone();
             button.connect_clicked(move |_| {
-                play_random_video(&dir_clone);
+                if let Some(mut proc) = play_random_video(&dir_clone) {
+                    let spinner = Spinner::new();
+                    btn_clone.set_child(Some(&spinner));
+                    btn_clone.set_sensitive(false);
+                    proc.wait().expect("Command failed");
+                    btn_clone.set_child(Widget::NONE);
+                    btn_clone.set_sensitive(true);
+                }
             });
 
             // Create a smaller button for opening the folder
             let folder_button = Button::with_label("📁");
             folder_button.set_size_request(30, 30);
+            let btn_clone = folder_button.clone();
             let dir_clone = dir.clone();
             folder_button.connect_clicked(move |_| {
-                open_folder(&dir_clone);
+                let mut proc = open_folder(&dir_clone);
+                let spinner = Spinner::new();
+                btn_clone.set_child(Some(&spinner));
+                btn_clone.set_sensitive(false);
+                proc.wait().expect("Command failed");
+                btn_clone.set_child(Widget::NONE);
+                btn_clone.set_sensitive(true);
             });
 
             // Create a horizontal box to hold the main button and the folder button
