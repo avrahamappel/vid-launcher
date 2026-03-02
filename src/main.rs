@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Box, Button};
+use gtk::{glib, Application, ApplicationWindow, Box, Button};
 use rand::prelude::*;
 
 fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
