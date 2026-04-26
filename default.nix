@@ -22,8 +22,6 @@ rustPlatform.buildRustPackage {
     lockFile = ./Cargo.lock;
   };
 
-  doCheck = false;
-
   buildInputs = [ glib gtk4 ];
 
   nativeBuildInputs = [
