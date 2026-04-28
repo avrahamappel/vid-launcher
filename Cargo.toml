@@ -5,10 +5,7 @@ edition = "2024"
 
 [dependencies]
 rand = "0.10.0"
-
-[dependencies.gtk]
-package = "gtk4"
-version = "0.10.0"
+iced = { version = "0.12", features = ["tokio"] }
 
 [dev-dependencies]
 tempfile = "3"
