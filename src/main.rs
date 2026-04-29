@@ -1,10 +1,11 @@
-use iced::{
-    executor, 
-    widget::{Button, Column, Row, Scrollable, Text}, 
-    Application, Command, Element, Settings,
-};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use iced::{
+    executor,
+    widget::{Button, Column, Row, Scrollable, Text},
+    Application, Command, Element, Settings, Theme,
+};
 use rand::prelude::*;
 
 fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
@@ -56,6 +57,10 @@ enum Message {
     OpenFolder(PathBuf),
 }
 
+struct Flags {
+    home_dir: String,
+}
+
 struct VidLauncher {
     videos_dir: PathBuf,
     subdirs: Vec<PathBuf>,
@@ -64,14 +69,18 @@ struct VidLauncher {
 impl Application for VidLauncher {
     type Executor = executor::Default;
     type Message = Message;
-    type Flags = ();
+    type Flags = Flags;
+    type Theme = Theme;
 
-    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let home_dir = std::env::var("HOME").expect("Failed to get HOME env");
+    fn new(flags: Flags) -> (Self, Command<Self::Message>) {
+        let home_dir = flags.home_dir;
         let videos_dir = PathBuf::from(home_dir).join("Videos");
         let subdirs = get_subdirectories(&videos_dir);
         (
-            VidLauncher { videos_dir, subdirs },
+            VidLauncher {
+                videos_dir,
+                subdirs,
+            },
             Command::none(),
         )
     }
@@ -84,26 +93,23 @@ impl Application for VidLauncher {
         match message {
             Message::PlayRandomVideo(dir) => {
                 let files = get_video_files(&dir);
-                if let Some(random_video) = files.choose(&mut rand::thread_rng()) {
+                if let Some(random_video) = files.choose(&mut rand::rng()) {
                     let cmd = get_open_command();
-                    let _ = std::process::Command::new(cmd)
-                        .arg(random_video)
-                        .spawn();
+                    let _ = std::process::Command::new(cmd).arg(random_video).spawn();
                 }
-            }
+            },
             Message::OpenFolder(dir) => {
                 let cmd = get_open_command();
                 let _ = std::process::Command::new(cmd).arg(dir).spawn();
-            }
+            },
         }
         Command::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let mut col = Column::new()
-            .push(Text::new("Select a subfolder to launch a random video:"));
+        let col = Column::new().push(Text::new("Select a subfolder to launch a random video:"));
 
-        let mut scroll = Scrollable::new(&self.subdirs);
+        let mut folders = vec![];
 
         for dir in &self.subdirs {
             let folder_name = dir
@@ -116,21 +122,23 @@ impl Application for VidLauncher {
             let open = Button::new(Text::new("📁"))
                 .on_press(Message::OpenFolder(dir.clone()))
                 .width(30);
-            scroll = scroll.push(
-                Row::new().push(play).push(open).spacing(10)
-            );
+            folders.push(Row::new().push(play).push(open).spacing(10).into());
         }
+
+        let scroll = Scrollable::new(Column::from_vec(folders));
 
         col.push(scroll).into()
     }
 }
 
 fn main() -> iced::Result {
+    let home_dir = std::env::var("HOME").expect("Failed to get HOME env");
+
     VidLauncher::run(Settings {
         window: iced::window::Settings {
-            size: (320, 500),
+            size: [320, 500].into(),
             ..Default::default()
         },
-        ..Settings::default()
+        ..Settings::with_flags(Flags { home_dir })
     })
 }

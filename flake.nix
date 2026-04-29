@@ -36,6 +36,9 @@
             rustfmt
             rust-analyzer
           ] ++ (with defaultPackage; buildInputs ++ nativeBuildInputs);
+
+          inherit (defaultPackage) RUSTFLAGS;
+          RUST_BACKTRACE = 1;
         };
       }
     );

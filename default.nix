@@ -1,7 +1,9 @@
-{ copyDesktopItems
-, glib
-, gtk4
+{ lib
+, copyDesktopItems
 , makeDesktopItem
+, libxkbcommon
+, vulkan-loader
+, wayland
 , pkg-config
 , rustPlatform
 , version ? null
@@ -10,6 +12,12 @@
 let
   cargoData = builtins.fromTOML (builtins.readFile ./Cargo.toml);
   inherit (cargoData.package) name;
+
+  dlopenLibraries = [
+    libxkbcommon
+    vulkan-loader
+    wayland
+  ];
 in
 
 rustPlatform.buildRustPackage {
@@ -22,12 +30,14 @@ rustPlatform.buildRustPackage {
     lockFile = ./Cargo.lock;
   };
 
-  buildInputs = [ glib gtk4 ];
+  buildInputs = [ ];
 
   nativeBuildInputs = [
     pkg-config
     copyDesktopItems
   ];
+
+  env.RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
 
   desktopItems = [
     (makeDesktopItem {
