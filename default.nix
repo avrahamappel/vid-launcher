@@ -1,7 +1,14 @@
 { lib
 , copyDesktopItems
 , makeDesktopItem
+, mkShell
 , libxkbcommon
+, bacon
+, cargo
+, clippy
+, rustc
+, rustfmt
+, rust-analyzer
 , vulkan-loader
 , wayland
 , pkg-config
@@ -13,11 +20,40 @@ let
   cargoData = builtins.fromTOML (builtins.readFile ./Cargo.toml);
   inherit (cargoData.package) name;
 
+  cargoDeps = rustPlatform.importCargoLock {
+    lockFile = ./Cargo.lock;
+  };
+
+  nativeBuildInputs = [
+    pkg-config
+  ];
+
   dlopenLibraries = [
     libxkbcommon
     vulkan-loader
     wayland
   ];
+
+  RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
+
+  devShell = mkShell {
+    packages = [
+      bacon
+      cargo
+      clippy
+      rustc
+      rustfmt
+      rust-analyzer
+      rustPlatform.cargoSetupHook
+    ] ++ nativeBuildInputs;
+
+    inherit cargoDeps;
+
+    buildType = "debug";
+
+    inherit RUSTFLAGS;
+    RUST_BACKTRACE = 1;
+  };
 in
 
 rustPlatform.buildRustPackage {
@@ -26,18 +62,11 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  cargoDeps = rustPlatform.importCargoLock {
-    lockFile = ./Cargo.lock;
-  };
+  inherit cargoDeps;
 
-  buildInputs = [ ];
+  nativeBuildInputs = nativeBuildInputs ++ [ copyDesktopItems ];
 
-  nativeBuildInputs = [
-    pkg-config
-    copyDesktopItems
-  ];
-
-  env.RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
+  inherit RUSTFLAGS;
 
   desktopItems = [
     (makeDesktopItem {
@@ -49,4 +78,8 @@ rustPlatform.buildRustPackage {
       categories = [ "AudioVideo" "Player" ];
     })
   ];
+
+  passthru = {
+    inherit devShell;
+  };
 }
