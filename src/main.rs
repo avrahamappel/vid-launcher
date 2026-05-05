@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use iced::{
     executor,
-    widget::{Button, Column, Row, Scrollable, Text},
+    widget::{column, row, Button, Column, Scrollable, Text},
     Application, Command, Element, Settings, Theme,
 };
 use rand::prelude::*;
@@ -107,27 +107,33 @@ impl Application for VidLauncher {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let col = Column::new().push(Text::new("Select a subfolder to launch a random video:"));
+        let help_text = Text::new("Select a subfolder to launch a random video:");
 
-        let mut folders = vec![];
+        let folder_buttons: Column<Element<_>> = self
+            .subdirs
+            .iter()
+            .map(|dir| {
+                let folder_name = dir
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("<unknown>");
 
-        for dir in &self.subdirs {
-            let folder_name = dir
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("<unknown>");
-            let play = Button::new(Text::new(folder_name))
-                .on_press(Message::PlayRandomVideo(dir.clone()))
-                .width(iced::Length::Fill);
-            let open = Button::new(Text::new("📁"))
-                .on_press(Message::OpenFolder(dir.clone()))
-                .width(30);
-            folders.push(Row::new().push(play).push(open).spacing(10).into());
-        }
+                row![
+                    Button::new(Text::new(folder_name))
+                        .on_press(Message::PlayRandomVideo(dir.clone()))
+                        .width(iced::Length::Fill),
+                    Button::new(Text::new("📁"))
+                        .on_press(Message::OpenFolder(dir.clone()))
+                        .width(30),
+                ]
+                .spacing(10)
+                .into()
+            })
+            .collect();
 
-        let scroll = Scrollable::new(Column::from_vec(folders));
+        let scroll = Scrollable::new(folder_buttons);
 
-        col.push(scroll).into()
+        column![help_text, folder_buttons].into()
     }
 }
 
