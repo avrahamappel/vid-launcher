@@ -44,12 +44,7 @@ let
       rustc
       rustfmt
       rust-analyzer
-      rustPlatform.cargoSetupHook
     ] ++ nativeBuildInputs;
-
-    inherit cargoDeps;
-
-    buildType = "debug";
 
     inherit RUSTFLAGS;
     RUST_BACKTRACE = 1;
