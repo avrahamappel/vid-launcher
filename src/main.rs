@@ -1,8 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path, path::PathBuf, sync::Arc};
 
 use iced::{
-    mouse,
-    widget::{button, column, container, image, row, scrollable, space, text},
+    widget::{button, column, container, image, mouse_area, row, scrollable, space, text, Row},
     Alignment, Element, Length, Task,
 };
 use rand::prelude::*;
@@ -329,70 +328,67 @@ impl VidLauncher {
 
 /// ---------------------------------------------------------------------
 /// Build a single tile UI element
-fn tile_view(index: usize, tile: &Tile) -> Element<Message> {
+fn tile_view<'t, 'e>(index: usize, tile: &'t Tile) -> Element<'e, Message> {
     // Background container that reports hover events
-    let mut container = container(
-        column![
-            // Thumbnail / icon
-            if let Some(ref thumb) = tile.thumb {
-                image::viewer(thumb.clone())
-                    .width(Length::Fill)
-                    .height(Length::FillPortion(8))
-                    .into()
-            } else {
-                // placeholder box
-                container(text("No thumb"))
-                    .width(Length::Fill)
-                    .height(Length::FillPortion(8))
-                    //.center_x()
-                    //.center_y()
-                    .into()
-            },
-            // Hover overlay (buttons + spinner)
-            if tile.hovered {
-                let mut btns = row![
-                    button(text("Shuffle"))
-                        .on_press(Message::ClickShuffle { index })
-                        .padding(5),
-                    button(text("Folder"))
-                        .on_press(Message::ClickFolder { index })
-                        .padding(5),
-                ]
-                .spacing(10)
-                .align_y(Alignment::Center);
+    mouse_area(
+        container(
+            column![
+                // Thumbnail / icon
+                if let Some(ref thumb) = tile.thumb {
+                    Element::from(
+                        image(thumb.clone())
+                            .width(Length::Fill)
+                            .height(Length::FillPortion(8)),
+                    )
+                } else {
+                    // placeholder box
+                    Element::from(
+                        container(text("No thumb"))
+                            .width(Length::Fill)
+                            .height(Length::FillPortion(8)),
+                    )
+                },
+                // Hover overlay (buttons + spinner)
+                if tile.hovered {
+                    let mut btns: Row<_> = row![
+                        button("Shuffle")
+                            .on_press(Message::ClickShuffle { index })
+                            .padding(5),
+                        button("Folder")
+                            .on_press(Message::ClickFolder { index })
+                            .padding(5),
+                    ]
+                    .spacing(10)
+                    .align_y(Alignment::Center);
 
-                if tile.loading {
-                    //btns = btns.push(spinner::default().size(20));
+                    if tile.loading {
+                        //btns = btns.push(spinner::default().size(20));
+                    }
+
+                    btns.into()
+                } else {
+                    // empty space when not hovered
+                    Element::from(
+                        container(space().width(Length::Fill)).height(Length::FillPortion(2)),
+                    )
                 }
-
-                btns.into()
-            } else {
-                // empty space when not hovered
-                container(space().width(Length::Fill))
-                    .height(Length::FillPortion(2))
-                    .into()
-            }
-        ]
-        .spacing(5),
+            ]
+            .spacing(5),
+        )
+        .width(Length::FillPortion(1))
+        .height(Length::FillPortion(1))
+        .padding(5),
     )
-    .width(Length::FillPortion(1))
-    .height(Length::FillPortion(1))
-    .padding(5);
-
     // Capture hover events
-    container = container.on_event(move |event, _| match event {
-        iced::Event::Mouse(mouse::Event::CursorEntered) => Some(Message::HoverTile {
-            index,
-            hovered: true,
-        }),
-        iced::Event::Mouse(mouse::Event::CursorLeft) => Some(Message::HoverTile {
-            index,
-            hovered: false,
-        }),
-        _ => None,
-    });
-
-    container.into()
+    .on_enter(Message::HoverTile {
+        index,
+        hovered: true,
+    })
+    .on_exit(Message::HoverTile {
+        index,
+        hovered: false,
+    })
+    .into()
 }
 
 /// ---------------------------------------------------------------------
@@ -430,12 +426,12 @@ fn build_folder_tiles(parent_tile: &Tile) -> Vec<Tile> {
 /// ---------------------------------------------------------------------
 /// Child‑window view (4‑column infinite scroll)
 fn folder_view(tiles: Vec<Tile>) -> iced::Element<'static, Message> {
-    let mut cols = vec![column![], column![], column![], column![]];
-    for (i, tile) in tiles.into_iter().enumerate() {
-        let view = tile_view(i, &tile);
-        cols[i % 4] = cols[i % 4].push(view);
+    let mut cols = [vec![], vec![], vec![], vec![]];
+    for (i, tile) in tiles.iter().enumerate() {
+        let view = tile_view(i, tile);
+        cols[i % 4].push(view);
     }
-    let row_content = row(cols.into_iter().map(Element::from))
+    let row_content = row(cols.into_iter().map(|tiles| Element::from(column(tiles))))
         .spacing(10)
         .padding(10);
     container(scrollable(row_content))
