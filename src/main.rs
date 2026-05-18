@@ -1,10 +1,11 @@
+use std::{collections::HashMap, ffi::OsStr, path::Path, path::PathBuf, sync::Arc};
+
 use iced::{
-    executor, mouse, Alignment, Application, Command, Element, Settings, Theme,
-    widget::{button, column, container, image, row, scrollable, spinner, text},
-    Length,
+    mouse,
+    widget::{button, column, container, image, row, scrollable, space, text},
+    Alignment, Element, Length, Task,
 };
-use rand::seq::SliceRandom;
-use std::{collections::HashMap, ffi::OsStr, path::PathBuf, sync::Arc};
+use rand::prelude::*;
 
 /// A show is a collection of channels; each show may have its own icon.
 #[derive(Debug, Clone)]
@@ -68,55 +69,9 @@ enum Message {
     OpenFolderWindow { index: usize },
 
     /// Message forwarded from a child window (e.g., play video inside that window).
-    ChildWindow(Message),
+    //ChildWindow(Message),
 
     /// Internal – spinner finished, re‑enable UI.
-    LoadingFinished { index: usize },
-}
-
-use iced::{
-    executor, mouse, Alignment, Application, Command, Element, Settings, Theme,
-    widget::{button, column, container, image, row, scrollable, spinner, text},
-    Length, Point, Size,
-};
-use rand::seq::SliceRandom;
-use std::{collections::HashMap, ffi::OsStr, path::{Path, PathBuf}, sync::Arc};
-use tokio::process::Command as TokioCommand;
-
-/// ----------- Data structures (same as shown above) -------------
-#[derive(Debug, Clone)]
-struct Show {
-    name: String,
-    icon_path: Option<PathBuf>,
-    channels: Vec<Channel>,
-}
-#[derive(Debug, Clone)]
-struct Channel {
-    name: String,
-    url: String,
-}
-#[derive(Debug, Clone)]
-struct Tile {
-    show: Arc<Show>,
-    folder: Option<PathBuf>,
-    thumb: Option<PathBuf>,
-    hovered: bool,
-    loading: bool,
-}
-#[derive(Debug, Default)]
-struct AppState {
-    shows: HashMap<String, Arc<Show>>,
-    tiles: Vec<Tile>,
-    folder_windows: HashMap<u32, Vec<Tile>>, // window_id → tiles
-}
-#[derive(Debug, Clone)]
-enum Message {
-    HoverTile { index: usize, hovered: bool },
-    ClickShuffle { index: usize },
-    ClickFolder { index: usize },
-    DownloadFinished { index: usize, result: Result<PathBuf, String> },
-    OpenFolderWindow { index: usize },
-    ChildWindow(Box<Message>), // messages from a secondary window
     LoadingFinished { index: usize },
 }
 
@@ -141,50 +96,44 @@ fn random_video_in_folder(folder: &Path) -> Option<PathBuf> {
                 .unwrap_or(false)
         })
         .collect::<Vec<_>>()
-        .choose(&mut rand::thread_rng())
+        .choose(&mut rand::rng())
         .map(|e| e.path())
 }
 
 /// Helper to invoke yt‑dlp for a single video.
 async fn yt_dlp_download_one(url: &str, dest_dir: &Path) -> Result<PathBuf, String> {
-    let mut cmd = TokioCommand::new("yt-dlp");
-    cmd.arg("-o")
-        .arg(format!("{}/%(title)s.%(ext)s", dest_dir.display()))
-        .arg("-f")
-        .arg("best[ext=mp4]/best")
-        .arg(url);
-    // strip channel/show names later (see post‑process step)
-    let out = cmd.output().await.map_err(|e| e.to_string())?;
-    if !out.status.success() {
-        return Err(String::from_utf8_lossy(&out.stderr).into_owned());
-    }
-    // yt‑dlp writes the file; we locate it by scanning the folder.
-    let file = std::fs::read_dir(dest_dir)
-        .ok()
-        .and_then(|mut it| it.find_map(|e| e.ok()))
-        .ok_or_else(|| "download succeeded but file not found".to_string())?;
-    Ok(file.path())
+    todo!()
+    //let mut cmd = TokioCommand::new("yt-dlp");
+    //cmd.arg("-o")
+    //    .arg(format!("{}/%(title)s.%(ext)s", dest_dir.display()))
+    //    .arg("-f")
+    //    .arg("best[ext=mp4]/best")
+    //    .arg(url);
+    //// strip channel/show names later (see post‑process step)
+    //let out = cmd.output().await.map_err(|e| e.to_string())?;
+    //if !out.status.success() {
+    //    return Err(String::from_utf8_lossy(&out.stderr).into_owned());
+    //}
+    //// yt‑dlp writes the file; we locate it by scanning the folder.
+    //let file = std::fs::read_dir(dest_dir)
+    //    .ok()
+    //    .and_then(|mut it| it.find_map(|e| e.ok()))
+    //    .ok_or_else(|| "download succeeded but file not found".to_string())?;
+    //Ok(file.path())
 }
 
 /// Helper to launch mpv (or any player) with a given file.
 fn launch_player(path: &Path) {
-    let _ = std::process::Command::new("mpv")
-        .arg(path)
-        .spawn(); // fire‑and‑forget
+    //let _ = std::process::Command::new("mpv").arg(path).spawn(); // fire‑and‑forget
 }
 
 /// -------------------------------------------------------------
 /// Application implementation
-struct MyApp {
+struct VidLauncher {
     state: AppState,
 }
-impl Application for MyApp {
-    type Executor = executor::Tokio; // needed for async commands
-    type Message = Message;
-    type Theme = Theme;
-    type Flags = ();
-
-    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+impl VidLauncher {
+    fn new() -> (Self, Task<Message>) {
         // ----- Stub data -------------------------------------------------
         let demo_show = Arc::new(Show {
             name: "Demo Show".into(),
@@ -219,137 +168,132 @@ impl Application for MyApp {
                     folder_windows: HashMap::new(),
                 },
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
-    fn title(&self) -> String {
-        "Infinite Tiles".into()
-    }
-
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::HoverTile { index, hovered } => {
-                if let Some(t) = self.state.tiles.get_mut(index) {
-                    t.hovered = hovered;
-                }
-                Command::none()
-            }
+                //if let Some(t) = self.state.tiles.get_mut(index) {
+                //    t.hovered = hovered;
+                //}
+                Task::none()
+            },
 
             Message::ClickShuffle { index } => {
-                if let Some(tile) = self.state.tiles.get_mut(index) {
-                    tile.loading = true;
-                }
-                // Decide which async action to run
-                let tile = self.state.tiles[index].clone();
-                Command::perform(
-                    async move {
-                        if let Some(folder) = &tile.folder {
-                            // Folder exists → pick random video
-                            if let Some(v) = random_video_in_folder(folder) {
-                                Ok(v)
-                            } else {
-                                Err("no video files in folder".into())
-                            }
-                        } else {
-                            // No folder → download first video with yt‑dlp
-                            // Use a deterministic sub‑dir under ./downloads/<show_name>
-                            let dest = PathBuf::from("./downloads")
-                                .join(&tile.show.name);
-                            std::fs::create_dir_all(&dest).ok();
-                            // Grab the first channel URL
-                            let url = tile
-                                .show
-                                .channels
-                                .first()
-                                .map(|c| c.url.clone())
-                                .ok_or_else(|| "no channel URL".to_string())?;
-                            yt_dlp_download_one(&url, &dest).await
-                        }
-                    },
-                    move |res| Message::DownloadFinished { index, result: res },
-                )
-            }
+                //if let Some(tile) = self.state.tiles.get_mut(index) {
+                //    tile.loading = true;
+                //}
+                //// Decide which async action to run
+                //let tile = self.state.tiles[index].clone();
+                //Task::perform(
+                //    async move {
+                //        if let Some(folder) = &tile.folder {
+                //            // Folder exists → pick random video
+                //            if let Some(v) = random_video_in_folder(folder) {
+                //                Ok(v)
+                //            } else {
+                //                Err("no video files in folder".into())
+                //            }
+                //        } else {
+                //            // No folder → download first video with yt‑dlp
+                //            // Use a deterministic sub‑dir under ./downloads/<show_name>
+                //            let dest = PathBuf::from("./downloads").join(&tile.show.name);
+                //            std::fs::create_dir_all(&dest).ok();
+                //            // Grab the first channel URL
+                //            let url = tile
+                //                .show
+                //                .channels
+                //                .first()
+                //                .map(|c| c.url.clone())
+                //                .ok_or_else(|| "no channel URL".to_string())?;
+                //            yt_dlp_download_one(&url, &dest).await
+                //        }
+                //    },
+                //    move |res| Message::DownloadFinished { index, result: res },
+                //)
+                Task::none()
+            },
 
             Message::DownloadFinished { index, result } => {
-                // Turn spinner off regardless of success/failure
-                if let Some(t) = self.state.tiles.get_mut(index) {
-                    t.loading = false;
-                }
-                match result {
-                    Ok(path) => {
-                        // Successful → play video
-                        launch_player(&path);
-                    }
-                    Err(err) => {
-                        eprintln!("shuffle error: {}", err);
-                        // In a full UI you would surface the error to the user.
-                    }
-                }
-                Command::none()
-            }
+                //// Turn spinner off regardless of success/failure
+                //if let Some(t) = self.state.tiles.get_mut(index) {
+                //    t.loading = false;
+                //}
+                //match result {
+                //    Ok(path) => {
+                //        // Successful → play video
+                //        launch_player(&path);
+                //    },
+                //    Err(err) => {
+                //        eprintln!("shuffle error: {}", err);
+                //        // In a full UI you would surface the error to the user.
+                //    },
+                //}
+                Task::none()
+            },
 
             Message::ClickFolder { index } => {
-                // Turn spinner on while we inspect/create the folder
-                if let Some(t) = self.state.tiles.get_mut(index) {
-                    t.loading = true;
-                }
-                let tile = self.state.tiles[index].clone();
-                Command::perform(
-                    async move {
-                        // Resolve folder existence (or create one)
-                        let folder = match &tile.folder {
-                            Some(p) => p.clone(),
-                            None => {
-                                // First time → create a folder under ./library/<show_name>
-                                let p = PathBuf::from("./library")
-                                    .join(&tile.show.name);
-                                std::fs::create_dir_all(&p).ok();
-                                p
-                            }
-                        };
-                        // Populate folder with thumbnails / video list (simplified)
-                        // Real implementation would run `yt-dlp --skip-download --write-thumbnail`
-                        // for each channel and store the images.
-                        Ok(folder)
-                    },
-                    move |folder_res| match folder_res {
-                        Ok(path) => Message::OpenFolderWindow { index },
-                        Err(e) => {
-                            eprintln!("folder error: {}", e);
-                            Message::LoadingFinished { index }
-                        }
-                    },
-                )
-            }
+                Task::none()
+                //// Turn spinner on while we inspect/create the folder
+                //if let Some(t) = self.state.tiles.get_mut(index) {
+                //    t.loading = true;
+                //}
+                //let tile = self.state.tiles[index].clone();
+                //Task::perform(
+                //    async move {
+                //        // Resolve folder existence (or create one)
+                //        let folder = match &tile.folder {
+                //            Some(p) => p.clone(),
+                //            None => {
+                //                // First time → create a folder under ./library/<show_name>
+                //                let p = PathBuf::from("./library").join(&tile.show.name);
+                //                std::fs::create_dir_all(&p).ok();
+                //                p
+                //            },
+                //        };
+                //        // Populate folder with thumbnails / video list (simplified)
+                //        // Real implementation would run `yt-dlp --skip-download --write-thumbnail`
+                //        // for each channel and store the images.
+                //        Ok(folder)
+                //    },
+                //    move |folder_res| match folder_res {
+                //        Ok(path) => Message::OpenFolderWindow { index },
+                //        Err(e) => {
+                //            eprintln!("folder error: {}", e);
+                //            Message::LoadingFinished { index }
+                //        },
+                //    },
+                //)
+            },
 
             Message::OpenFolderWindow { index } => {
-                if let Some(tile) = self.state.tiles.get_mut(index) {
-                    tile.loading = false;
-                }
-                // Build a new window that shows the folder's contents.
-                // Iced 0.12 supports multiple windows via `Program::new_window`.
-                let new_tiles = build_folder_tiles(&self.state.tiles[index]);
-                let window_id = iced::window::new(
-                    format!("{} – {}", self.state.tiles[index].show.name, "Channel view"),
-                    folder_view(new_tiles.clone()),
-                );
-                // Store tiles for later (optional, if you want to route messages back)
-                self.state.folder_windows.insert(window_id, new_tiles);
-                Command::none()
-            }
+                //    if let Some(tile) = self.state.tiles.get_mut(index) {
+                //        tile.loading = false;
+                //    }
+                //    // Build a new window that shows the folder's contents.
+                //    // Iced 0.12 supports multiple windows via `Program::new_window`.
+                //    let new_tiles = build_folder_tiles(&self.state.tiles[index]);
+                //    let window_id = iced::window::new(
+                //        format!("{} – {}", self.state.tiles[index].show.name, "Channel view"),
+                //        folder_view(new_tiles.clone()),
+                //    );
+                //    // Store tiles for later (optional, if you want to route messages back)
+                //    self.state.folder_windows.insert(window_id, new_tiles);
+                Task::none()
+            },
 
-            Message::ChildWindow(msg) => {
-                // Forward messages that originated from a child window.
-                self.update(*msg)
-            }
-
+            //Message::ChildWindow(msg) => {
+            //    // Forward messages that originated from a child window.
+            //    self.update(*msg)
+            //},
             Message::LoadingFinished { index } => {
-                if let Some(t) = self.state.tiles.get_mut(index) {
-                    t.loading = false;
-                }
-                Command::none()
-            }
+                //if let Some(t) = self.state.tiles.get_mut(index) {
+                //    t.loading = false;
+                //}
+                Task::none()
+            },
         }
     }
 
@@ -377,8 +321,8 @@ impl Application for MyApp {
         container(content)
             .width(Length::Fill)
             .height(Length::Fill)
-            .center_x()
-            .center_y()
+            //.center_x()
+            //.center_y()
             .into()
     }
 }
@@ -400,8 +344,8 @@ fn tile_view(index: usize, tile: &Tile) -> Element<Message> {
                 container(text("No thumb"))
                     .width(Length::Fill)
                     .height(Length::FillPortion(8))
-                    .center_x()
-                    .center_y()
+                    //.center_x()
+                    //.center_y()
                     .into()
             },
             // Hover overlay (buttons + spinner)
@@ -415,16 +359,16 @@ fn tile_view(index: usize, tile: &Tile) -> Element<Message> {
                         .padding(5),
                 ]
                 .spacing(10)
-                .align_items(Alignment::Center);
+                .align_y(Alignment::Center);
 
                 if tile.loading {
-                    btns = btns.push(spinner::default().size(20));
+                    //btns = btns.push(spinner::default().size(20));
                 }
 
                 btns.into()
             } else {
                 // empty space when not hovered
-                container(horizontal_space(Length::Fill))
+                container(space().width(Length::Fill))
                     .height(Length::FillPortion(2))
                     .into()
             }
@@ -433,23 +377,18 @@ fn tile_view(index: usize, tile: &Tile) -> Element<Message> {
     )
     .width(Length::FillPortion(1))
     .height(Length::FillPortion(1))
-    .padding(5)
-    .style(iced::theme::Container::Box);
+    .padding(5);
 
     // Capture hover events
     container = container.on_event(move |event, _| match event {
-        iced::Event::Mouse(mouse::Event::CursorEntered) => {
-            Some(Message::HoverTile {
-                index,
-                hovered: true,
-            })
-        }
-        iced::Event::Mouse(mouse::Event::CursorLeft) => {
-            Some(Message::HoverTile {
-                index,
-                hovered: false,
-            })
-        }
+        iced::Event::Mouse(mouse::Event::CursorEntered) => Some(Message::HoverTile {
+            index,
+            hovered: true,
+        }),
+        iced::Event::Mouse(mouse::Event::CursorLeft) => Some(Message::HoverTile {
+            index,
+            hovered: false,
+        }),
         _ => None,
     });
 
@@ -496,9 +435,17 @@ fn folder_view(tiles: Vec<Tile>) -> iced::Element<'static, Message> {
         let view = tile_view(i, &tile);
         cols[i % 4] = cols[i % 4].push(view);
     }
-    let row_content = row(cols).spacing(10).padding(10);
+    let row_content = row(cols.into_iter().map(Element::from))
+        .spacing(10)
+        .padding(10);
     container(scrollable(row_content))
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
+}
+
+fn main() -> iced::Result {
+    iced::application(VidLauncher::new, VidLauncher::update, VidLauncher::view)
+        .title("Random Vid Launcher")
+        .run()
 }
