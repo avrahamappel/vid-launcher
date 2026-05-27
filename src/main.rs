@@ -49,14 +49,18 @@ fn get_open_command() -> &'static str {
     }
 }
 
+type ButtonId = usize;
+
 #[derive(Debug, Clone)]
 enum Message {
     PlayRandomVideo(PathBuf),
-    OpenFolder(PathBuf),
+    OpenFolder(ButtonId, PathBuf),
+    Finished(ButtonId),
 }
 
 struct VidLauncher {
     subdirs: Vec<PathBuf>,
+    loading: Vec<ButtonId>,
 }
 
 impl VidLauncher {
@@ -65,24 +69,44 @@ impl VidLauncher {
         let videos_dir = PathBuf::from(home_dir).join("Videos");
         let subdirs = get_subdirectories(&videos_dir);
 
-        VidLauncher { subdirs }
+        VidLauncher {
+            subdirs,
+            loading: vec![],
+        }
     }
 
+    // TODO delegate to task and add spiiiiinner
     fn update(&mut self, message: Message) -> Task<Message> {
+        use Message::*;
+
         match message {
-            Message::PlayRandomVideo(dir) => {
+            PlayRandomVideo(dir) => {
                 let files = get_video_files(&dir);
                 if let Some(random_video) = files.choose(&mut rand::rng()) {
                     let cmd = get_open_command();
                     let _ = std::process::Command::new(cmd).arg(random_video).spawn();
                 }
+                Task::none()
             },
-            Message::OpenFolder(dir) => {
-                let cmd = get_open_command();
-                let _ = std::process::Command::new(cmd).arg(dir).spawn();
+            OpenFolder(button_id, dir) => {
+                self.loading.push(button_id);
+                Task::future(async {
+                    // TODO let's just timeout for a few seconds, can't trust blocking state of
+                    // xdg-open anyway
+                    tokio::task::spawn_blocking(|| {
+                        eprintln!("Opening [{}] folder", dir.display());
+                        let cmd = get_open_command();
+                        let _ = std::process::Command::new(cmd).arg(dir).status();
+                    })
+                    .await;
+                    Finished(button_id)
+                })
+            },
+            Finished(button_id) => {
+                self.loading.remove(button_id);
+                Task::none()
             },
         }
-        Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -91,7 +115,8 @@ impl VidLauncher {
         let folder_buttons = self
             .subdirs
             .iter()
-            .map(|dir| {
+            .enumerate()
+            .map(|(idx, dir)| {
                 let folder_name = dir
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -101,9 +126,15 @@ impl VidLauncher {
                     Button::new(Text::new(folder_name))
                         .on_press(Message::PlayRandomVideo(dir.clone()))
                         .width(iced::Length::Fill),
-                    Button::new(Text::new("📁"))
-                        .on_press(Message::OpenFolder(dir.clone()))
-                        .width(30),
+                    // TODO overlay the whole window and disable interaction while loading (no
+                    // need to tttttrack button id)
+                    Button::new(if self.loading.contains(&idx) {
+                        Text::new("🌀")
+                    } else {
+                        Text::new("📁")
+                    })
+                    .on_press(Message::OpenFolder(idx, dir.clone()))
+                    .width(30),
                 ]
                 .spacing(10)
                 .into();
