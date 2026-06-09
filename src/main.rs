@@ -1,3 +1,5 @@
+mod weights;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -51,7 +53,9 @@ fn get_open_command() -> &'static str {
 
 fn play_random_video(directory: &Path) {
     let video_files = get_video_files(directory);
-    if let Some(random_video) = video_files.choose(&mut rand::rng()) {
+    if let Ok(random_video) =
+        video_files.choose_weighted(&mut rand::rng(), crate::weights::weight_by_last_accessed)
+    {
         let cmd = get_open_command();
 
         Command::new(cmd)
