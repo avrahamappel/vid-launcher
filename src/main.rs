@@ -1,11 +1,9 @@
 mod weights;
 
-use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
-use iced::border::width;
+use async_process::Command;
 use iced::widget::{row, Button, Column};
 use iced::{Element, Length, Task};
 use rand::prelude::*;
@@ -53,38 +51,44 @@ fn get_open_command() -> &'static str {
     }
 }
 
-fn play_random_video(directory: &Path) {
+fn play_random_video(directory: &Path) -> Task<Event> {
     let video_files = get_video_files(directory);
     if let Ok(random_video) =
         video_files.choose_weighted(&mut rand::rng(), crate::weights::weight_by_last_accessed)
     {
         let cmd = get_open_command();
 
-        Command::new(cmd)
-            .arg(random_video)
-            .spawn()
-            .expect("Failed to open video file.");
+        Task::perform(
+            Command::new(cmd).arg(random_video).status(),
+            |res| match res {
+                Ok(_) => Event::Complete,
+                Err(e) => Event::Error(e.kind().to_string()),
+            },
+        )
+    } else {
+        Task::done(Event::Error("No video files found in folder".into()))
     }
 }
 
-fn open_folder(directory: &PathBuf) {
+fn open_folder(directory: &PathBuf) -> Task<Event> {
     let cmd = get_open_command();
 
-    Command::new(cmd)
-        .arg(directory)
-        .spawn()
-        .expect("Failed to open folder.");
+    Task::perform(Command::new(cmd).arg(directory).status(), |res| match res {
+        Ok(_) => Event::Complete,
+        Err(e) => Event::Error(e.kind().to_string()),
+    })
 }
 
 struct Show {
     name: String,
+    path: PathBuf,
 }
 
 impl Show {
-    fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-        }
+    fn new(path: PathBuf) -> Option<Self> {
+        let name = path.file_name()?.to_str()?.to_string();
+
+        Some(Self { name, path })
     }
 }
 
@@ -98,12 +102,7 @@ impl App {
         let videos_dir = PathBuf::from(home_dir).join("Videos");
 
         let directories = get_subdirectories(&videos_dir);
-        let shows = directories
-            .iter()
-            .flat_map(|p| p.file_name())
-            .flat_map(OsStr::to_str)
-            .map(Show::new)
-            .collect();
+        let shows = directories.into_iter().filter_map(Show::new).collect();
 
         Self { shows }
     }
@@ -112,27 +111,46 @@ impl App {
 #[derive(Clone)]
 #[non_exhaustive]
 enum Event {
-    //<'s> {
-    PlayRandomVideo, //(&'s Show),
-    BrowseShow,      //(&'s Show),
+    PlayRandomVideo(usize),
+    BrowseShow(usize),
+    Complete,
+    Error(String),
 }
 
-fn update(app: &mut App, event: Event) { //-> Task {
-                                         //use Event::*;
-                                         //match event {
-                                         //    PlayRandomVideo(show) => Task::new(play_random_video(directory))
-                                         //}
+fn update(app: &mut App, event: Event) -> Task<Event> {
+    use Event::*;
+    match event {
+        PlayRandomVideo(idx) => {
+            // TODO turn on loading indicator
+            let show = &app.shows[idx];
+            play_random_video(&show.path)
+        },
+        BrowseShow(idx) => {
+            // TODO turn on loading indicator
+            let show = &app.shows[idx];
+            open_folder(&show.path)
+        },
+        Complete => {
+            // TODO turn off loading indicator
+            Task::none()
+        },
+        Error(e) => {
+            todo!("display errors")
+        },
+    }
 }
 
-fn view<'s>(app: &'s App) -> Column<'_, Event> {
+fn view(app: &App) -> Column<'_, Event> {
     app.shows
         .iter()
-        .map(|show| {
+        .enumerate()
+        .map(|(idx, show)| {
+            // TODO make tiles (after thumbnails)
             Element::from(row![
                 Button::new(show.name.as_str())
                     .width(Length::Fill)
-                    .on_press(Event::PlayRandomVideo),
-                Button::new("📁").on_press(Event::BrowseShow)
+                    .on_press(Event::PlayRandomVideo(idx)),
+                Button::new("📁").on_press(Event::BrowseShow(idx))
             ])
         })
         .collect::<Column<_>>()
@@ -140,64 +158,10 @@ fn view<'s>(app: &'s App) -> Column<'_, Event> {
 
 fn main() -> iced::Result {
     iced::application(App::new, update, view)
+        // TODO title (via cargo metadata?)
         .window_size((300, 400))
         .run()
 }
-
-//fn main() -> glib::ExitCode {
-// Initialize GTK
-//let application = Application::builder().build();
-
-//application.connect_activate(|app| {
-// Create the main window
-//let window = ApplicationWindow::builder()
-//    .application(app)
-//    .title(include_str!("./title.txt").trim())
-//    .default_width(300)
-//.default_height(400)
-//.build();
-
-// Create a vertical box to hold buttons
-//let vbox = Box::new(gtk::Orientation::Vertical, 5);
-//window.set_child(Some(&vbox));
-
-// Get the user's Videos directory from the $HOME environment variable
-//let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
-//let videos_dir = PathBuf::from(home_dir).join("Videos");
-//
-//let directories = get_subdirectories(&videos_dir);
-
-//for dir in directories {
-//    let dir_clone = dir.clone();
-//    let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
-//    button.set_hexpand(true);
-//    button.connect_clicked(move |_| {
-//        play_random_video(&dir_clone);
-//    });
-
-// Create a smaller button for opening the folder
-//let folder_button = Button::with_label("📁");
-//folder_button.set_size_request(30, 30);
-//let dir_clone = dir.clone();
-//folder_button.connect_clicked(move |_| {
-//    open_folder(&dir_clone);
-//});
-
-// Create a horizontal box to hold the main button and the folder button
-//let hbox = Box::new(gtk::Orientation::Horizontal, 5);
-//hbox.append(&button);
-//hbox.append(&folder_button);
-
-//vbox.append(&hbox);
-//}
-
-// Show all widgets
-//window.show();
-//});
-
-// Start the GTK main loop
-//application.run()
-//}
 
 #[cfg(test)]
 mod tests {
