@@ -1,12 +1,15 @@
+mod components;
 mod weights;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use async_process::Command;
-use iced::widget::{row, Button, Column};
+use iced::widget::{column, row, Button, Column};
 use iced::{Element, Length, Task};
 use rand::prelude::*;
+
+use crate::components::loading;
 
 fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
     match fs::read_dir(path) {
@@ -94,17 +97,22 @@ impl Show {
 
 struct App {
     shows: Vec<Show>,
+    loading: bool,
 }
 
 impl App {
     fn new() -> Self {
+        // TODO do this work on load so we show window right away
         let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
         let videos_dir = PathBuf::from(home_dir).join("Videos");
 
         let directories = get_subdirectories(&videos_dir);
         let shows = directories.into_iter().filter_map(Show::new).collect();
 
-        Self { shows }
+        Self {
+            shows,
+            loading: false,
+        }
     }
 }
 
@@ -121,27 +129,30 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
     use Event::*;
     match event {
         PlayRandomVideo(idx) => {
-            // TODO turn on loading indicator
+            app.loading = true;
             let show = &app.shows[idx];
             play_random_video(&show.path)
         },
         BrowseShow(idx) => {
-            // TODO turn on loading indicator
+            app.loading = true;
             let show = &app.shows[idx];
             open_folder(&show.path)
         },
         Complete => {
-            // TODO turn off loading indicator
+            app.loading = false;
             Task::none()
         },
-        Error(e) => {
-            todo!("display errors")
+        Error(_) => {
+            app.loading = false;
+            // TODO display errors
+            Task::none()
         },
     }
 }
 
 fn view(app: &App) -> Column<'_, Event> {
-    app.shows
+    let list = app
+        .shows
         .iter()
         .enumerate()
         .map(|(idx, show)| {
@@ -153,7 +164,15 @@ fn view(app: &App) -> Column<'_, Event> {
                 Button::new("📁").on_press(Event::BrowseShow(idx))
             ])
         })
-        .collect::<Column<_>>()
+        .collect::<Column<_>>();
+
+    let root = column![list];
+
+    if app.loading {
+        root.push(loading())
+    } else {
+        root
+    }
 }
 
 fn main() -> iced::Result {
