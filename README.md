@@ -2,6 +2,10 @@
 
 A simple GUI application written in Rust that allows users to play random video files from subdirectories within their `~/Videos` directory.
 
+## Why
+
+I made this so my kids wouldn't fight about which video to watch.
+
 ## Functionality
 
 - Displays a vertical list of buttons corresponding to subdirectories in the `~/Videos` directory.
