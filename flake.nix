@@ -27,16 +27,7 @@
           ];
         };
 
-        devShell = pkgs.mkShell {
-          packages = with pkgs; [
-            bacon
-            cargo
-            clippy
-            rustc
-            rustfmt
-            rust-analyzer
-          ] ++ (with defaultPackage; buildInputs ++ nativeBuildInputs);
-        };
+        inherit (defaultPackage) devShell;
       }
     );
 }

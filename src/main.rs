@@ -1,11 +1,13 @@
 mod weights;
 
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use gtk::prelude::*;
-use gtk::{glib, Application, ApplicationWindow, Box, Button};
+use iced::border::width;
+use iced::widget::{row, Button, Column};
+use iced::{Element, Length, Task};
 use rand::prelude::*;
 
 fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
@@ -74,60 +76,128 @@ fn open_folder(directory: &PathBuf) {
         .expect("Failed to open folder.");
 }
 
-fn main() -> glib::ExitCode {
-    // Initialize GTK
-    let application = Application::builder().build();
+struct Show {
+    name: String,
+}
 
-    application.connect_activate(|app| {
-        // Create the main window
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title(include_str!("./title.txt").trim())
-            .default_width(300)
-            .default_height(400)
-            .build();
+impl Show {
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+        }
+    }
+}
 
-        // Create a vertical box to hold buttons
-        let vbox = Box::new(gtk::Orientation::Vertical, 5);
-        window.set_child(Some(&vbox));
+struct App {
+    shows: Vec<Show>,
+}
 
-        // Get the user's Videos directory from the $HOME environment variable
+impl App {
+    fn new() -> Self {
         let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
         let videos_dir = PathBuf::from(home_dir).join("Videos");
 
         let directories = get_subdirectories(&videos_dir);
+        let shows = directories
+            .iter()
+            .flat_map(|p| p.file_name())
+            .flat_map(OsStr::to_str)
+            .map(Show::new)
+            .collect();
 
-        for dir in directories {
-            let dir_clone = dir.clone();
-            let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
-            button.set_hexpand(true);
-            button.connect_clicked(move |_| {
-                play_random_video(&dir_clone);
-            });
-
-            // Create a smaller button for opening the folder
-            let folder_button = Button::with_label("📁");
-            folder_button.set_size_request(30, 30);
-            let dir_clone = dir.clone();
-            folder_button.connect_clicked(move |_| {
-                open_folder(&dir_clone);
-            });
-
-            // Create a horizontal box to hold the main button and the folder button
-            let hbox = Box::new(gtk::Orientation::Horizontal, 5);
-            hbox.append(&button);
-            hbox.append(&folder_button);
-
-            vbox.append(&hbox);
-        }
-
-        // Show all widgets
-        window.show();
-    });
-
-    // Start the GTK main loop
-    application.run()
+        Self { shows }
+    }
 }
+
+#[derive(Clone)]
+#[non_exhaustive]
+enum Event {
+    //<'s> {
+    PlayRandomVideo, //(&'s Show),
+    BrowseShow,      //(&'s Show),
+}
+
+fn update(app: &mut App, event: Event) { //-> Task {
+                                         //use Event::*;
+                                         //match event {
+                                         //    PlayRandomVideo(show) => Task::new(play_random_video(directory))
+                                         //}
+}
+
+fn view<'s>(app: &'s App) -> Column<'_, Event> {
+    app.shows
+        .iter()
+        .map(|show| {
+            Element::from(row![
+                Button::new(show.name.as_str())
+                    .width(Length::Fill)
+                    .on_press(Event::PlayRandomVideo),
+                Button::new("📁").on_press(Event::BrowseShow)
+            ])
+        })
+        .collect::<Column<_>>()
+}
+
+fn main() -> iced::Result {
+    iced::application(App::new, update, view)
+        .window_size((300, 400))
+        .run()
+}
+
+//fn main() -> glib::ExitCode {
+// Initialize GTK
+//let application = Application::builder().build();
+
+//application.connect_activate(|app| {
+// Create the main window
+//let window = ApplicationWindow::builder()
+//    .application(app)
+//    .title(include_str!("./title.txt").trim())
+//    .default_width(300)
+//.default_height(400)
+//.build();
+
+// Create a vertical box to hold buttons
+//let vbox = Box::new(gtk::Orientation::Vertical, 5);
+//window.set_child(Some(&vbox));
+
+// Get the user's Videos directory from the $HOME environment variable
+//let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
+//let videos_dir = PathBuf::from(home_dir).join("Videos");
+//
+//let directories = get_subdirectories(&videos_dir);
+
+//for dir in directories {
+//    let dir_clone = dir.clone();
+//    let button = Button::with_label(dir.file_name().unwrap().to_str().unwrap());
+//    button.set_hexpand(true);
+//    button.connect_clicked(move |_| {
+//        play_random_video(&dir_clone);
+//    });
+
+// Create a smaller button for opening the folder
+//let folder_button = Button::with_label("📁");
+//folder_button.set_size_request(30, 30);
+//let dir_clone = dir.clone();
+//folder_button.connect_clicked(move |_| {
+//    open_folder(&dir_clone);
+//});
+
+// Create a horizontal box to hold the main button and the folder button
+//let hbox = Box::new(gtk::Orientation::Horizontal, 5);
+//hbox.append(&button);
+//hbox.append(&folder_button);
+
+//vbox.append(&hbox);
+//}
+
+// Show all widgets
+//window.show();
+//});
+
+// Start the GTK main loop
+//application.run()
+//}
 
 #[cfg(test)]
 mod tests {
