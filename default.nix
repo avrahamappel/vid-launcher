@@ -18,7 +18,7 @@
 
 let
   cargoData = fromTOML (builtins.readFile ./Cargo.toml);
-  inherit (cargoData.package) name;
+  crateName = cargoData.package.name;
 
   cargoDeps = rustPlatform.importCargoLock {
     lockFile = ./Cargo.lock;
@@ -34,7 +34,12 @@ let
     wayland
   ];
 
-  RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
+  title = "Random Vid Launcher";
+
+  env = {
+    RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
+    VID_LAUNCHER_TITLE = title;
+  };
 
   devShell = mkShell {
     packages = [
@@ -46,7 +51,8 @@ let
       rust-analyzer
     ] ++ nativeBuildInputs;
 
-    inherit RUSTFLAGS;
+    inherit env;
+
     RUST_BACKTRACE = 1;
   };
 in
@@ -57,17 +63,15 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  inherit cargoDeps;
+  inherit cargoDeps env;
 
   nativeBuildInputs = nativeBuildInputs ++ [ copyDesktopItems ];
 
-  inherit RUSTFLAGS;
-
   desktopItems = [
     (makeDesktopItem {
-      name = name;
-      desktopName = builtins.readFile src/title.txt;
-      exec = name;
+      name = crateName;
+      desktopName = title;
+      exec = crateName;
       icon = "video-x-generic";
       terminal = false;
       categories = [ "AudioVideo" "Player" ];

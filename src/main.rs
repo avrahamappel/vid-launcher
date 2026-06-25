@@ -135,7 +135,7 @@ fn view(app: &App) -> Column<'_, Event> {
 
 fn main() -> iced::Result {
     iced::application(App::new, update, view)
-        // TODO title (via cargo metadata?)
+        .title(option_env!("VID_LAUNCHER_TITLE").unwrap_or("vid-launcher-debug"))
         .window_size((300, 400))
         .run()
 }
