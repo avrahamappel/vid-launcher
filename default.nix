@@ -34,10 +34,12 @@ let
     wayland
   ];
 
+  dlopenLibraryPath = lib.makeLibraryPath dlopenLibraries;
+
   title = "Random Vid Launcher";
 
   env = {
-    RUSTFLAGS = "-C link-arg=-Wl,-rpath,${lib.makeLibraryPath dlopenLibraries}";
+    LD_LIBRARY_PATH = dlopenLibraryPath;
     VID_LAUNCHER_TITLE = title;
   };
 
@@ -61,7 +63,7 @@ rustPlatform.buildRustPackage {
   pname = cargoData.package.name;
   version = if version != null then version else cargoData.package.version;
 
-  src = ./.;
+  src = lib.cleanSource ./.;
 
   inherit cargoDeps env;
 
