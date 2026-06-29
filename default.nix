@@ -1,4 +1,6 @@
 { lib
+, stdenv
+, autoPatchelfHook
 , copyDesktopItems
 , makeDesktopItem
 , mkShell
@@ -38,11 +40,6 @@ let
 
   title = "Random Vid Launcher";
 
-  env = {
-    LD_LIBRARY_PATH = dlopenLibraryPath;
-    VID_LAUNCHER_TITLE = title;
-  };
-
   devShell = mkShell {
     packages = [
       bacon
@@ -53,9 +50,9 @@ let
       rust-analyzer
     ] ++ nativeBuildInputs;
 
-    inherit env;
-
+    LD_LIBRARY_PATH = dlopenLibraryPath;
     RUST_BACKTRACE = 1;
+    VID_LAUNCHER_TITLE = "${title} (DEBUG)";
   };
 in
 
@@ -65,9 +62,24 @@ rustPlatform.buildRustPackage {
 
   src = lib.cleanSource ./.;
 
-  inherit cargoDeps env;
+  inherit cargoDeps;
 
-  nativeBuildInputs = nativeBuildInputs ++ [ copyDesktopItems ];
+  nativeBuildInputs = nativeBuildInputs ++ [
+    autoPatchelfHook
+    copyDesktopItems
+  ];
+
+  appendRunpaths = [ dlopenLibraryPath ];
+
+  buildInputs = [
+    libxkbcommon
+    vulkan-loader
+    wayland
+    stdenv.cc.cc
+  ];
+
+  # RUSTFLAGS = "-C link-arg=-Wl,-rpath,${dlopenLibraryPath}";
+  VID_LAUNCHER_TITLE = title;
 
   desktopItems = [
     (makeDesktopItem {
