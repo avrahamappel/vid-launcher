@@ -5,6 +5,7 @@ mod weights;
 use std::path::{Path, PathBuf};
 
 use async_process::Command;
+use iced::widget::button::secondary;
 use iced::widget::{column, row, Button, Column};
 use iced::{Element, Length, Task};
 use rand::prelude::*;
@@ -117,9 +118,20 @@ fn view(app: &App) -> Column<'_, Event> {
             // TODO make tiles (after thumbnails)
             Element::from(row![
                 Button::new(show.name.as_str())
+                    .style(secondary)
                     .width(Length::Fill)
-                    .on_press(Event::PlayRandomVideo(idx)),
-                Button::new("📁").on_press(Event::BrowseShow(idx))
+                    .on_press_maybe(if app.loading {
+                        None
+                    } else {
+                        Some(Event::PlayRandomVideo(idx))
+                    }),
+                Button::new("📁")
+                    .style(secondary)
+                    .on_press_maybe(if app.loading {
+                        None
+                    } else {
+                        Some(Event::BrowseShow(idx))
+                    })
             ])
         })
         .collect::<Column<_>>();
