@@ -3,15 +3,20 @@ mod file_operations;
 mod weights;
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
+use async_io::Timer;
 use async_process::Command;
 use iced::widget::button::secondary;
-use iced::widget::{column, row, Button, Column};
+use iced::widget::container::danger;
+use iced::widget::{column, container, row, Button, Column};
 use iced::{Element, Length, Task};
 use rand::prelude::*;
 
-use crate::components::loading;
-use crate::file_operations::*;
+use crate::{
+    components::{centered, loading},
+    file_operations::{get_open_command, get_subdirectories, get_video_files},
+};
 
 fn play_random_video(directory: &Path) -> Task<Event> {
     let video_files = get_video_files(directory);
@@ -20,24 +25,21 @@ fn play_random_video(directory: &Path) -> Task<Event> {
     {
         let cmd = get_open_command();
 
-        Task::perform(
-            Command::new(cmd).arg(random_video).status(),
-            |res| match res {
-                Ok(_) => Event::Complete,
-                Err(e) => Event::Error(e.kind().to_string()),
-            },
-        )
+        Task::perform(Command::new(cmd).arg(random_video).status(), |res| {
+            Event::Complete(res.map(|_| ()).map_err(|e| e.kind().to_string()))
+        })
     } else {
-        Task::done(Event::Error("No video files found in folder".into()))
+        Task::done(Event::Complete(
+            Err("No video files found in folder".into()),
+        ))
     }
 }
 
 fn open_folder(directory: &PathBuf) -> Task<Event> {
     let cmd = get_open_command();
 
-    Task::perform(Command::new(cmd).arg(directory).status(), |res| match res {
-        Ok(_) => Event::Complete,
-        Err(e) => Event::Error(e.kind().to_string()),
+    Task::perform(Command::new(cmd).arg(directory).status(), |res| {
+        Event::Complete(res.map(|_| ()).map_err(|e| e.kind().to_string()))
     })
 }
 
@@ -57,6 +59,7 @@ impl Show {
 struct App {
     shows: Vec<Show>,
     loading: bool,
+    error: Option<String>,
 }
 
 impl App {
@@ -71,6 +74,7 @@ impl App {
         Self {
             shows,
             loading: false,
+            error: None,
         }
     }
 }
@@ -80,8 +84,8 @@ impl App {
 enum Event {
     PlayRandomVideo(usize),
     BrowseShow(usize),
-    Complete,
-    Error(String),
+    Complete(Result<(), String>),
+    ClearError,
 }
 
 fn update(app: &mut App, event: Event) -> Task<Event> {
@@ -97,13 +101,18 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             let show = &app.shows[idx];
             open_folder(&show.path)
         },
-        Complete => {
+        Complete(res) => {
             app.loading = false;
-            Task::none()
+            if let Err(error) = res {
+                eprintln!("Error: {error}");
+                app.error = Some(error);
+                Task::perform(Timer::after(Duration::from_secs(1)), |_| ClearError)
+            } else {
+                Task::none()
+            }
         },
-        Error(_) => {
-            app.loading = false;
-            // TODO display errors
+        ClearError => {
+            app.error = None;
             Task::none()
         },
     }
@@ -136,13 +145,17 @@ fn view(app: &App) -> Column<'_, Event> {
         })
         .collect::<Column<_>>();
 
-    let root = column![list];
+    let mut root = column![list];
 
     if app.loading {
-        root.push(loading())
-    } else {
-        root
+        root = root.push(loading());
     }
+    if let Some(error) = &app.error {
+        root = root.push(centered(
+            container(error.as_str()).style(danger).padding(15),
+        ));
+    }
+    root
 }
 
 fn main() -> iced::Result {
