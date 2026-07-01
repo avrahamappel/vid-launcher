@@ -53,9 +53,8 @@ let
   };
 in
 
-craneLib.buildPackage common // {
-  pname = cargoData.package.name;
-  version = if version != null then version else cargoData.package.version;
+craneLib.buildPackage (common // {
+  inherit version;
 
   inherit cargoArtifacts;
 
@@ -89,4 +88,4 @@ craneLib.buildPackage common // {
   passthru = {
     inherit devShell;
   };
-}
+})
