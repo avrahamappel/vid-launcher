@@ -34,9 +34,6 @@ let
   title = "Random Vid Launcher";
 
   common = {
-    pname = cargoData.package.name;
-    version = if version != null then version else cargoData.package.version;
-
     src = craneLib.cleanCargoSource ./.;
   };
 
@@ -57,6 +54,9 @@ let
 in
 
 craneLib.buildPackage common // {
+  pname = cargoData.package.name;
+  version = if version != null then version else cargoData.package.version;
+
   inherit cargoArtifacts;
 
   nativeBuildInputs = nativeBuildInputs ++ [
