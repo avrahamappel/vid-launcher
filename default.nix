@@ -3,28 +3,21 @@
 , autoPatchelfHook
 , copyDesktopItems
 , makeDesktopItem
-, mkShell
 , libxkbcommon
 , bacon
-, cargo
 , clippy
-, rustc
 , rustfmt
 , rust-analyzer
 , vulkan-loader
 , wayland
 , pkg-config
-, rustPlatform
+, craneLib
 , version ? null
 }:
 
 let
   cargoData = fromTOML (builtins.readFile ./Cargo.toml);
   crateName = cargoData.package.name;
-
-  cargoDeps = rustPlatform.importCargoLock {
-    lockFile = ./Cargo.lock;
-  };
 
   nativeBuildInputs = [
     pkg-config
@@ -40,12 +33,19 @@ let
 
   title = "Random Vid Launcher";
 
-  devShell = mkShell {
+  common = {
+    pname = cargoData.package.name;
+    version = if version != null then version else cargoData.package.version;
+
+    src = craneLib.cleanCargoSource ./.;
+  };
+
+  cargoArtifacts = craneLib.buildDepsOnly common;
+
+  devShell = craneLib.devShell {
     packages = [
       bacon
-      cargo
       clippy
-      rustc
       rustfmt
       rust-analyzer
     ] ++ nativeBuildInputs;
@@ -56,13 +56,8 @@ let
   };
 in
 
-rustPlatform.buildRustPackage {
-  pname = cargoData.package.name;
-  version = if version != null then version else cargoData.package.version;
-
-  src = lib.cleanSource ./.;
-
-  inherit cargoDeps;
+craneLib.buildPackage common // {
+  inherit cargoArtifacts;
 
   nativeBuildInputs = nativeBuildInputs ++ [
     autoPatchelfHook
@@ -78,7 +73,6 @@ rustPlatform.buildRustPackage {
     stdenv.cc.cc
   ];
 
-  # RUSTFLAGS = "-C link-arg=-Wl,-rpath,${dlopenLibraryPath}";
   VID_LAUNCHER_TITLE = title;
 
   desktopItems = [
