@@ -9,8 +9,10 @@ use async_io::Timer;
 use async_process::Command;
 use iced::widget::button::secondary;
 use iced::widget::container::danger;
-use iced::widget::{column, container, row, Button, Column};
+use iced::widget::image::Handle;
+use iced::widget::{column, container, image, row, Button, Column, Image, Row};
 use iced::{Element, Length, Task};
+use itertools::Itertools;
 use rand::prelude::*;
 
 use crate::{
@@ -20,6 +22,7 @@ use crate::{
 
 #[derive(Clone)]
 struct Show {
+    // TODO: some kind of id for shows
     name: String,
     path: PathBuf,
 }
@@ -145,32 +148,54 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
     }
 }
 
+const WINDOW_WIDTH: u32 = 300;
+const TILES_PER_ROW: usize = 2;
+//const TILE_WIDTH: u32 = WINDOW_WIDTH / (TILES_PER_ROW as u32);
+
 fn view(app: &App) -> Column<'_, Event> {
     let list = app
         .shows
         .iter()
         .enumerate()
-        .map(|(idx, show)| {
-            // TODO make tiles (after thumbnails)
-            Element::from(row![
-                Button::new(show.name.as_str())
-                    .style(secondary)
-                    .width(Length::Fill)
-                    .on_press_maybe(if app.loading {
-                        None
-                    } else {
-                        Some(Event::PlayRandomVideo(idx))
-                    }),
-                Button::new("📁")
-                    .style(secondary)
-                    .on_press_maybe(if app.loading {
-                        None
-                    } else {
-                        Some(Event::BrowseShow(idx))
+        .chunks(TILES_PER_ROW)
+        .into_iter()
+        .map(|chunk| {
+            Element::from(
+                chunk
+                    .map(|(idx, show)| {
+                        //let image: Image<Handle> = Image::new(Handle::from_bytes(
+                        //    include_bytes!("../ferris.png").as_slice(),
+                        //))
+                        //.width(TILE_WIDTH);
+
+                        //let c = container(image);
+
+                        Element::new(
+                            Button::new(
+                                show.name.as_str(), //image.into(),
+                            )
+                            .style(secondary)
+                            .width(Length::Fill)
+                            .on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
+                        )
+                        //Button::new("📁")
+                        //    .style(secondary)
+                        //    .on_press_maybe(if app.loading {
+                        //        None
+                        //    } else {
+                        //        Some(Event::BrowseShow(idx))
+                        //    })
                     })
-            ])
+                    .collect::<Row<_>>(),
+            )
         })
         .collect::<Column<_>>();
+
+    //let list = list
+    //    .chunks(2)
+    //    .into_iter()
+    //    .map(|chunk| Element::new(row![chunk.into_iter().cloned()]))
+    //    .collect::<Column<_>>();
 
     let mut root = column![list];
 
@@ -188,6 +213,6 @@ fn view(app: &App) -> Column<'_, Event> {
 fn main() -> iced::Result {
     iced::application(init, update, view)
         .title(option_env!("VID_LAUNCHER_TITLE").unwrap_or("vid-launcher-debug"))
-        .window_size((300, 400))
+        .window_size((WINDOW_WIDTH as u32, 400))
         .run()
 }
