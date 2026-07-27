@@ -62,6 +62,7 @@ enum Event {
 }
 
 /// Load all shows
+#[expect(clippy::unused_async)]
 async fn get_shows() -> Vec<Show> {
     // TODO load preconfigured shows
 
@@ -148,9 +149,10 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
     }
 }
 
-const WINDOW_WIDTH: u32 = 300;
-const TILES_PER_ROW: usize = 2;
-//const TILE_WIDTH: u32 = WINDOW_WIDTH / (TILES_PER_ROW as u32);
+const TILES_PER_ROW: usize = 3;
+const TILE_WIDTH: u32 = 150;
+#[expect(clippy::cast_possible_truncation)]
+const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
 
 fn view(app: &App) -> Column<'_, Event> {
     let list = app
@@ -163,16 +165,17 @@ fn view(app: &App) -> Column<'_, Event> {
             Element::from(
                 chunk
                     .map(|(idx, show)| {
-                        //let image: Image<Handle> = Image::new(Handle::from_bytes(
-                        //    include_bytes!("../ferris.png").as_slice(),
-                        //))
-                        //.width(TILE_WIDTH);
+                        let image: Image<Handle> = Image::new(Handle::from_bytes(
+                            include_bytes!("../ferris.png").as_slice(),
+                        ))
+                        .width(TILE_WIDTH);
 
                         //let c = container(image);
 
                         Element::new(
                             Button::new(
-                                show.name.as_str(), //image.into(),
+                                //show.name.as_str(),
+                                image,
                             )
                             .style(secondary)
                             .width(Length::Fill)
