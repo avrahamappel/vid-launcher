@@ -166,11 +166,15 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
 
 const TILES_PER_ROW: usize = 2;
 const TILE_WIDTH: u32 = 150;
+const TILE_HEIGHT: u32 = 100;
 #[expect(clippy::cast_possible_truncation)]
 const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
 
+const IMG_BYTES: &[u8] = include_bytes!("../ferris.png").as_slice();
+
 fn view(app: &App) -> Column<'_, Event> {
-    let img_bytes = include_bytes!("../ferris.png").as_slice();
+    let handle = Handle::from_bytes(IMG_BYTES);
+
     let list = app
         .shows
         .iter()
@@ -182,9 +186,10 @@ fn view(app: &App) -> Column<'_, Event> {
                 chunk
                     .map(|(idx, show)| {
                         let tile = mouse_area(
-                            button(image(Handle::from_bytes(img_bytes)))
+                            button(image(handle.clone()))
                                 .style(secondary)
-                                .width(TILE_WIDTH),
+                                .width(TILE_WIDTH)
+                                .height(TILE_HEIGHT),
                         )
                         .on_enter(Event::Entered(idx))
                         .on_exit(Event::Exited);
