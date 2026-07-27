@@ -10,7 +10,7 @@ use async_process::Command;
 use iced::widget::button::secondary;
 use iced::widget::container::danger;
 use iced::widget::image::Handle;
-use iced::widget::{column, container, image, row, Button, Column, Image, Row};
+use iced::widget::{button, center, column, container, hover, image, row, Column, Image, Row};
 use iced::{Element, Length, Task};
 use itertools::Itertools;
 use rand::prelude::*;
@@ -168,33 +168,27 @@ fn view(app: &App) -> Column<'_, Event> {
                     .map(|(idx, show)| {
                         let image: Image<Handle> = Image::new(Handle::from_bytes(img_bytes));
 
-                        Element::new(
-                            Button::new(
-                                //show.name.as_str(),
-                                image,
-                            )
-                            .style(secondary)
-                            .width(TILE_WIDTH)
-                            .on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
+                        let tile = button(
+                            //show.name.as_str(),
+                            image,
                         )
-                        //Button::new("📁")
-                        //    .style(secondary)
-                        //    .on_press_maybe(if app.loading {
-                        //        None
-                        //    } else {
-                        //        Some(Event::BrowseShow(idx))
-                        //    })
+                        .style(secondary)
+                        .width(TILE_WIDTH);
+
+                        let hover_view = center(row![
+                            button(" ▶️").on_press_maybe(
+                                (!app.loading).then_some(Event::PlayRandomVideo(idx))
+                            ),
+                            button("📁")
+                                .on_press_maybe((!app.loading).then_some(Event::BrowseShow(idx))),
+                        ]);
+
+                        hover(tile, hover_view)
                     })
                     .collect::<Row<_>>(),
             )
         })
         .collect::<Column<_>>();
-
-    //let list = list
-    //    .chunks(2)
-    //    .into_iter()
-    //    .map(|chunk| Element::new(row![chunk.into_iter().cloned()]))
-    //    .collect::<Column<_>>();
 
     let mut root = column![list];
 
