@@ -155,6 +155,7 @@ const TILE_WIDTH: u32 = 150;
 const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
 
 fn view(app: &App) -> Column<'_, Event> {
+    let img_bytes = include_bytes!("../ferris.png").as_slice();
     let list = app
         .shows
         .iter()
@@ -165,12 +166,7 @@ fn view(app: &App) -> Column<'_, Event> {
             Element::from(
                 chunk
                     .map(|(idx, show)| {
-                        let image: Image<Handle> = Image::new(Handle::from_bytes(
-                            include_bytes!("../ferris.png").as_slice(),
-                        ))
-                        .width(TILE_WIDTH);
-
-                        //let c = container(image);
+                        let image: Image<Handle> = Image::new(Handle::from_bytes(img_bytes));
 
                         Element::new(
                             Button::new(
@@ -178,7 +174,7 @@ fn view(app: &App) -> Column<'_, Event> {
                                 image,
                             )
                             .style(secondary)
-                            .width(Length::Fill)
+                            .width(TILE_WIDTH)
                             .on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
                         )
                         //Button::new("📁")
