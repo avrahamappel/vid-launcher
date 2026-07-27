@@ -8,10 +8,12 @@ use std::time::Duration;
 use async_io::Timer;
 use async_process::Command;
 use iced::widget::button::secondary;
-use iced::widget::container::danger;
+use iced::widget::container::{danger, rounded_box};
 use iced::widget::image::Handle;
-use iced::widget::{button, center, column, container, hover, image, row, Column, Row};
-use iced::{Element, Task};
+use iced::widget::{
+    button, center, column, container, float, hover, image, mouse_area, row, Column, Row,
+};
+use iced::{Element, Task, Vector};
 use itertools::Itertools;
 use rand::prelude::*;
 
@@ -39,6 +41,8 @@ struct App {
     shows: Vec<Show>,
     loading: bool,
     error: Option<String>,
+    /// Which title to display in the bottom of the view
+    display_title: Option<String>,
 }
 
 impl App {
@@ -47,6 +51,7 @@ impl App {
             shows: vec![],
             loading: true,
             error: None,
+            display_title: None,
         }
     }
 }
@@ -55,6 +60,8 @@ impl App {
 #[non_exhaustive]
 enum Event {
     ShowsLoaded(Vec<Show>),
+    Entered(usize),
+    Exited,
     PlayRandomVideo(usize),
     BrowseShow(usize),
     Complete(Result<(), String>),
@@ -122,6 +129,14 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             app.loading = false;
             Task::none()
         },
+        Entered(idx) => {
+            app.display_title = app.shows.get(idx).map(|s| s.name.clone());
+            Task::none()
+        },
+        Exited => {
+            app.display_title = None;
+            Task::none()
+        },
         PlayRandomVideo(idx) => {
             app.loading = true;
             let show_path = app.shows[idx].path.clone();
@@ -166,12 +181,13 @@ fn view(app: &App) -> Column<'_, Event> {
             Element::from(
                 chunk
                     .map(|(idx, show)| {
-                        let tile = button(
-                            //show.name.as_str(),
-                            image(Handle::from_bytes(img_bytes)),
+                        let tile = mouse_area(
+                            button(image(Handle::from_bytes(img_bytes)))
+                                .style(secondary)
+                                .width(TILE_WIDTH),
                         )
-                        .style(secondary)
-                        .width(TILE_WIDTH);
+                        .on_enter(Event::Entered(idx))
+                        .on_exit(Event::Exited);
 
                         let hover_view = center(row![
                             button(" ▶️").on_press_maybe(
@@ -189,6 +205,14 @@ fn view(app: &App) -> Column<'_, Event> {
         .collect::<Column<_>>();
 
     let mut root = column![list];
+
+    if let Some(title) = &app.display_title {
+        root = root.push(
+            float(container(title.as_str()).style(rounded_box)).translate(|container, viewport| {
+                Vector::new(0.0, viewport.height - container.height - 10.0 - container.y)
+            }),
+        );
+    }
 
     if app.loading {
         root = root.push(loading());
