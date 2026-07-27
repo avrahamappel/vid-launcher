@@ -204,6 +204,6 @@ fn view(app: &App) -> Column<'_, Event> {
 fn main() -> iced::Result {
     iced::application(init, update, view)
         .title(option_env!("VID_LAUNCHER_TITLE").unwrap_or("vid-launcher-debug"))
-        .window_size((WINDOW_WIDTH as u32, 400))
+        .window_size((WINDOW_WIDTH, 400))
         .run()
 }
