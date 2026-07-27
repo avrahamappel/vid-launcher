@@ -10,8 +10,8 @@ use async_process::Command;
 use iced::widget::button::secondary;
 use iced::widget::container::danger;
 use iced::widget::image::Handle;
-use iced::widget::{button, center, column, container, hover, image, row, Column, Image, Row};
-use iced::{Element, Length, Task};
+use iced::widget::{button, center, column, container, hover, image, row, Column, Row};
+use iced::{Element, Task};
 use itertools::Itertools;
 use rand::prelude::*;
 
@@ -149,7 +149,7 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
     }
 }
 
-const TILES_PER_ROW: usize = 3;
+const TILES_PER_ROW: usize = 2;
 const TILE_WIDTH: u32 = 150;
 #[expect(clippy::cast_possible_truncation)]
 const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
@@ -166,11 +166,9 @@ fn view(app: &App) -> Column<'_, Event> {
             Element::from(
                 chunk
                     .map(|(idx, show)| {
-                        let image: Image<Handle> = Image::new(Handle::from_bytes(img_bytes));
-
                         let tile = button(
                             //show.name.as_str(),
-                            image,
+                            image(Handle::from_bytes(img_bytes)),
                         )
                         .style(secondary)
                         .width(TILE_WIDTH);
