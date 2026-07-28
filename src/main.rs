@@ -36,21 +36,28 @@ impl Show {
     }
 }
 
+const IMG_BYTES: &[u8] = include_bytes!("../assets/video.png").as_slice();
+
 struct App {
     shows: Vec<Show>,
     loading: bool,
     error: Option<String>,
     /// Which title to display in the bottom of the view
     display_title: Option<String>,
+    /// The default image to display for a show with no thumbnail
+    default_image: Handle,
 }
 
 impl App {
     fn new() -> Self {
+        let default_image = Handle::from_bytes(IMG_BYTES);
+
         Self {
             shows: vec![],
             loading: true,
             error: None,
             display_title: None,
+            default_image,
         }
     }
 }
@@ -138,7 +145,7 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             // on another tile, do nothing)
             if let Some(show) = app.shows.get(idx) &&
                 let Some(ref title) = app.display_title &&
-                &show.name == title { 
+                &show.name == title {
                 app.display_title = None;
             }
             Task::none()
@@ -176,19 +183,19 @@ const TILE_HEIGHT: u32 = 100;
 #[expect(clippy::cast_possible_truncation)]
 const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
 
-const IMG_BYTES: &[u8] = include_bytes!("../ferris.png").as_slice();
-
 fn view(app: &App) -> Column<'_, Event> {
-    let handle = Handle::from_bytes(IMG_BYTES);
-
     let list = app
         .shows
         .iter()
         .enumerate()
         .map(|(idx, show)| {
-            let tile = mouse_area(image(handle.clone()).width(TILE_WIDTH).height(TILE_HEIGHT))
-                .on_enter(Event::EnteredTile(idx))
-                .on_exit(Event::ExitedTile(idx));
+            let tile = mouse_area(
+                image(app.default_image.clone())
+                    .width(TILE_WIDTH)
+                    .height(TILE_HEIGHT),
+            )
+            .on_enter(Event::EnteredTile(idx))
+            .on_exit(Event::ExitedTile(idx));
 
             let hover_view = center(row![
                 button(" ▶️")
