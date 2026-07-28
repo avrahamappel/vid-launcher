@@ -215,12 +215,14 @@ fn view(app: &App) -> Column<'_, Event> {
 
     if let Some(title) = &app.display_title {
         root = root.push(
-            float(container(title.as_str()).style(rounded_box)).translate(|container, viewport| {
-                Vector::new(
-                    (viewport.width - container.width) / 2.0 - container.x,
-                    viewport.height - container.height - 10.0 - container.y,
-                )
-            }),
+            float(container(title.as_str()).style(rounded_box).padding(10)).translate(
+                |container, viewport| {
+                    Vector::new(
+                        (viewport.width - container.width) / 2.0 - container.x,
+                        viewport.height - container.height - 10.0 - container.y,
+                    )
+                },
+            ),
         );
     }
 
