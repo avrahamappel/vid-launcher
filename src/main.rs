@@ -59,8 +59,8 @@ impl App {
 #[non_exhaustive]
 enum Event {
     ShowsLoaded(Vec<Show>),
-    Entered(usize),
-    Exited,
+    EnteredTile(usize),
+    ExitedTile(usize),
     PlayRandomVideo(usize),
     BrowseShow(usize),
     Complete(Result<(), String>),
@@ -128,12 +128,19 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             app.loading = false;
             Task::none()
         },
-        Entered(idx) => {
+        EnteredTile(idx) => {
             app.display_title = app.shows.get(idx).map(|s| s.name.clone());
             Task::none()
         },
-        Exited => {
-            app.display_title = None;
+        ExitedTile(idx) => {
+            // Clear the displayed title, if it's the one we're exiting
+            // (i.e., if the enter event has already fired
+            // on another tile, do nothing)
+            if let Some(show) = app.shows.get(idx) &&
+                let Some(ref title) = app.display_title &&
+                &show.name == title { 
+                app.display_title = None;
+            }
             Task::none()
         },
         PlayRandomVideo(idx) => {
@@ -179,18 +186,17 @@ fn view(app: &App) -> Column<'_, Event> {
         .iter()
         .enumerate()
         .map(|(idx, show)| {
-            let tile = mouse_area(
-                button(image(handle.clone()))
-                    .style(secondary)
-                    .width(TILE_WIDTH)
-                    .height(TILE_HEIGHT),
-            )
-            .on_enter(Event::Entered(idx))
-            .on_exit(Event::Exited);
+            let tile = mouse_area(image(handle.clone()).width(TILE_WIDTH).height(TILE_HEIGHT))
+                .on_enter(Event::EnteredTile(idx))
+                .on_exit(Event::ExitedTile(idx));
 
             let hover_view = center(row![
-                button(" ▶️").on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
-                button("📁").on_press_maybe((!app.loading).then_some(Event::BrowseShow(idx))),
+                button(" ▶️")
+                    .style(secondary)
+                    .on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
+                button("📁")
+                    .style(secondary)
+                    .on_press_maybe((!app.loading).then_some(Event::BrowseShow(idx))),
             ]);
 
             hover(tile, hover_view)
