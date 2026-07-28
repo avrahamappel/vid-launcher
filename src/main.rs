@@ -13,8 +13,7 @@ use iced::widget::image::Handle;
 use iced::widget::{
     button, center, column, container, float, hover, image, mouse_area, row, Column, Row,
 };
-use iced::{Element, Task, Vector};
-use itertools::Itertools;
+use iced::{Task, Vector};
 use rand::prelude::*;
 
 use crate::{
@@ -179,35 +178,25 @@ fn view(app: &App) -> Column<'_, Event> {
         .shows
         .iter()
         .enumerate()
-        .chunks(TILES_PER_ROW)
-        .into_iter()
-        .map(|chunk| {
-            Element::from(
-                chunk
-                    .map(|(idx, show)| {
-                        let tile = mouse_area(
-                            button(image(handle.clone()))
-                                .style(secondary)
-                                .width(TILE_WIDTH)
-                                .height(TILE_HEIGHT),
-                        )
-                        .on_enter(Event::Entered(idx))
-                        .on_exit(Event::Exited);
-
-                        let hover_view = center(row![
-                            button(" ▶️").on_press_maybe(
-                                (!app.loading).then_some(Event::PlayRandomVideo(idx))
-                            ),
-                            button("📁")
-                                .on_press_maybe((!app.loading).then_some(Event::BrowseShow(idx))),
-                        ]);
-
-                        hover(tile, hover_view)
-                    })
-                    .collect::<Row<_>>(),
+        .map(|(idx, show)| {
+            let tile = mouse_area(
+                button(image(handle.clone()))
+                    .style(secondary)
+                    .width(TILE_WIDTH)
+                    .height(TILE_HEIGHT),
             )
+            .on_enter(Event::Entered(idx))
+            .on_exit(Event::Exited);
+
+            let hover_view = center(row![
+                button(" ▶️").on_press_maybe((!app.loading).then_some(Event::PlayRandomVideo(idx))),
+                button("📁").on_press_maybe((!app.loading).then_some(Event::BrowseShow(idx))),
+            ]);
+
+            hover(tile, hover_view)
         })
-        .collect::<Column<_>>();
+        .collect::<Row<_>>()
+        .wrap();
 
     let mut root = column![list];
 
