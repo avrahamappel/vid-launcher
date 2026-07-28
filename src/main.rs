@@ -2,6 +2,7 @@
 
 mod app;
 mod components;
+mod config;
 mod file_operations;
 mod shows;
 mod thumbnails;
