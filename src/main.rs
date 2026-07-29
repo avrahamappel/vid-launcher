@@ -1,5 +1,7 @@
 mod components;
 mod file_operations;
+mod shows;
+mod utils;
 mod weights;
 
 use std::path::PathBuf;
@@ -16,25 +18,11 @@ use iced::widget::{
 use iced::{Task, Vector};
 use rand::prelude::*;
 
+use crate::shows::Show;
 use crate::{
     components::{centered, loading},
     file_operations::{get_open_command, get_subdirectories, get_video_files},
 };
-
-#[derive(Clone)]
-struct Show {
-    // TODO: some kind of id for shows
-    name: String,
-    path: PathBuf,
-}
-
-impl Show {
-    fn new(path: PathBuf) -> Option<Self> {
-        let name = path.file_name()?.to_str()?.to_string();
-
-        Some(Self { name, path })
-    }
-}
 
 const IMG_BYTES: &[u8] = include_bytes!("../assets/video.png").as_slice();
 
@@ -66,6 +54,7 @@ impl App {
 #[non_exhaustive]
 enum Event {
     ShowsLoaded(Vec<Show>),
+    ThumbnailLoaded(usize, Option<Handle>),
     EnteredTile(usize),
     ExitedTile(usize),
     PlayRandomVideo(usize),
@@ -80,8 +69,7 @@ async fn get_shows() -> Vec<Show> {
     // TODO load preconfigured shows
 
     // Load all directories in Videos
-    let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
-    let videos_dir = PathBuf::from(home_dir).join("Videos");
+    let videos_dir = utils::home_dir().join("Videos");
 
     let directories = get_subdirectories(&videos_dir);
 
@@ -133,6 +121,16 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
         ShowsLoaded(shows) => {
             app.shows = shows;
             app.loading = false;
+            Task::batch(app.shows.iter().enumerate().map(|(idx, show)| {
+                Task::perform(shows::load_thumbnail(show.path.clone()), move |thumbnail| {
+                    ThumbnailLoaded(idx, thumbnail)
+                })
+            }))
+        },
+        ThumbnailLoaded(idx, thumbnail) => {
+            if let Some(show) = app.shows.get_mut(idx) {
+                show.thumbnail = thumbnail;
+            }
             Task::none()
         },
         EnteredTile(idx) => {
