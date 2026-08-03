@@ -14,6 +14,8 @@ pub fn get_subdirectories(path: &Path) -> Vec<PathBuf> {
     }
 }
 
+/// Get video files recursively from a directory
+/// TODO: refactor to use streams
 pub fn get_video_files(directory: &Path) -> Vec<PathBuf> {
     let extensions = ["mp4", "mkv", "avi", "webm"];
 
