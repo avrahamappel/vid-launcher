@@ -3,15 +3,18 @@
 , autoPatchelfHook
 , copyDesktopItems
 , makeDesktopItem
+, mkShell
 , libxkbcommon
 , bacon
+, cargo
 , clippy
+, rustc
 , rustfmt
 , rust-analyzer
 , vulkan-loader
 , wayland
 , pkg-config
-, craneLib
+, rustPlatform
 , version ? null
 }:
 
@@ -33,16 +36,16 @@ let
 
   title = "Random Vid Launcher";
 
-  common = {
-    src = craneLib.cleanCargoSource ./.;
+  cargoDeps = rustPlatform.importCargoLock {
+    lockFile = ./Cargo.lock;
   };
 
-  cargoArtifacts = craneLib.buildDepsOnly common;
-
-  devShell = craneLib.devShell {
+  devShell = mkShell {
     packages = [
       bacon
+      cargo
       clippy
+      rustc
       rustfmt
       rust-analyzer
     ] ++ nativeBuildInputs;
@@ -53,10 +56,13 @@ let
   };
 in
 
-craneLib.buildPackage (common // {
+rustPlatform.buildRustPackage {
+  pname = cargoData.package.name;
   inherit version;
 
-  inherit cargoArtifacts;
+  src = lib.cleanSource ./.;
+
+  inherit cargoDeps;
 
   nativeBuildInputs = nativeBuildInputs ++ [
     autoPatchelfHook
@@ -88,4 +94,4 @@ craneLib.buildPackage (common // {
   passthru = {
     inherit devShell;
   };
-})
+}
