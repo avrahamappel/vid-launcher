@@ -13,7 +13,7 @@ use iced::widget::button::secondary;
 use iced::widget::container::{danger, rounded_box};
 use iced::widget::image::Handle;
 use iced::widget::{
-    button, center, column, container, float, hover, image, mouse_area, row, Column, Row,
+    Column, Row, button, center, column, container, float, hover, image, mouse_area, row,
 };
 use iced::{Task, Vector};
 use rand::prelude::*;
@@ -141,9 +141,10 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             // Clear the displayed title, if it's the one we're exiting
             // (i.e., if the enter event has already fired
             // on another tile, do nothing)
-            if let Some(show) = app.shows.get(idx) &&
-                let Some(ref title) = app.display_title &&
-                &show.name == title {
+            if let Some(show) = app.shows.get(idx)
+                && let Some(ref title) = app.display_title
+                && &show.name == title
+            {
                 app.display_title = None;
             }
             Task::none()

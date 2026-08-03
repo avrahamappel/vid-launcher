@@ -1,4 +1,4 @@
-use iced::widget::{container, container::rounded_box, Float};
+use iced::widget::{Float, container, container::rounded_box};
 
 use crate::components::centered;
 

@@ -1,4 +1,4 @@
-use iced::{widget::float, Element, Rectangle, Vector};
+use iced::{Element, Rectangle, Vector, widget::float};
 
 pub fn centered<'a, T, E>(content: E) -> float::Float<'a, T>
 where
