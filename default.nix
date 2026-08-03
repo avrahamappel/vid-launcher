@@ -3,11 +3,13 @@
 , autoPatchelfHook
 , copyDesktopItems
 , makeDesktopItem
+, makeWrapper
 , mkShell
 , libxkbcommon
 , bacon
 , cargo
 , clippy
+, ffmpeg
 , rustc
 , rustfmt
 , rust-analyzer
@@ -45,6 +47,7 @@ let
       bacon
       cargo
       clippy
+      ffmpeg
       rustc
       rustfmt
       rust-analyzer
@@ -57,7 +60,7 @@ let
 in
 
 rustPlatform.buildRustPackage {
-  pname = cargoData.package.name;
+  pname = crateName;
   inherit version;
 
   src = lib.cleanSource ./.;
@@ -67,6 +70,7 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = nativeBuildInputs ++ [
     autoPatchelfHook
     copyDesktopItems
+    makeWrapper
   ];
 
   appendRunpaths = [ dlopenLibraryPath ];
@@ -90,6 +94,12 @@ rustPlatform.buildRustPackage {
       categories = [ "AudioVideo" "Player" ];
     })
   ];
+
+  postFixup = ''
+    wrapProgram $out/bin/${crateName} --prefix PATH : ${lib.makeBinPath [
+      ffmpeg
+    ]}
+  '';
 
   passthru = {
     inherit devShell;
