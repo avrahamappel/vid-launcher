@@ -1,3 +1,5 @@
+#![allow(clippy::enum_glob_use)]
+
 mod components;
 mod file_operations;
 mod shows;
