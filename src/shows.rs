@@ -8,6 +8,7 @@ use iced::widget::image::Handle;
 use crate::get_video_files;
 use crate::utils;
 use crate::weights::LastAccessible;
+use crate::{TILE_HEIGHT, TILE_WIDTH};
 
 #[derive(Clone)]
 pub struct Show {
@@ -117,9 +118,18 @@ async fn generate_thumbnail(input: &Path, output: &Path) -> Result<(), std::io::
     cmd.arg("-i")
         .arg(input)
         .arg("-vf")
-        .arg("thumbnail")
+        // Explanation of ffmpeg filters:
+        // 1. Grab a thumbnail image
+        // 2. Scale it down to a height of TILE_HEIGHT, and automatic width
+        // (the assumption is that most of these videos are fairly wide, so no smartphone videos)
+        // 3. Crop the final image to the exact tile proportions
+        .arg(format!(
+            "thumbnail,scale=-1:{TILE_HEIGHT},crop={TILE_WIDTH}:{TILE_HEIGHT}"
+        ))
         .arg("-frames:v")
         .arg("1")
+        .arg("-q:v")
+        .arg("2")
         .arg(output)
         .stdin(Stdio::null())
         .stderr(Stdio::null())
