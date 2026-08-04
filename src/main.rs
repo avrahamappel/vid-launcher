@@ -3,6 +3,7 @@
 mod components;
 mod file_operations;
 mod shows;
+mod thumbnails;
 mod utils;
 mod weights;
 
@@ -21,6 +22,7 @@ use iced::{Task, Vector};
 use rand::prelude::*;
 
 use crate::shows::Show;
+use crate::thumbnails::load_thumbnail;
 use crate::{
     components::{centered, loading},
     file_operations::{get_open_command, get_subdirectories, get_video_files},
@@ -124,7 +126,7 @@ fn update(app: &mut App, event: Event) -> Task<Event> {
             app.shows = shows;
             app.loading = false;
             Task::batch(app.shows.iter().enumerate().map(|(idx, show)| {
-                Task::perform(shows::load_thumbnail(show.path.clone()), move |thumbnail| {
+                Task::perform(load_thumbnail(show.path.clone()), move |thumbnail| {
                     ThumbnailLoaded(idx, thumbnail)
                 })
             }))
