@@ -117,14 +117,15 @@ async fn generate_thumbnail(input: &Path, output: &Path) -> Result<(), std::io::
 
     cmd.arg("-i")
         .arg(input)
-        .arg("-vf")
         // Explanation of ffmpeg filters:
-        // 1. Grab a thumbnail image
-        // 2. Scale it down to a height of TILE_HEIGHT, and automatic width
-        // (the assumption is that most of these videos are fairly wide, so no smartphone videos)
+        // 1. 20 seconds into the video, grab a thumbnail image from the next 200 frames
+        // 2. Scale it down to TILE_WIDTH x TILE_HEIGHT, increasing one of the dimensions if necessary
         // 3. Crop the final image to the exact tile proportions
+        .arg("-ss")
+        .arg("00:00:20")
+        .arg("-vf")
         .arg(format!(
-            "thumbnail,scale=-1:{TILE_HEIGHT},crop={TILE_WIDTH}:{TILE_HEIGHT}"
+            "thumbnail=n=200,scale={TILE_WIDTH}:{TILE_HEIGHT}:force_original_aspect_ratio=increase,crop={TILE_WIDTH}:{TILE_HEIGHT}"
         ))
         .arg("-frames:v")
         .arg("1")
