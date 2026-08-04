@@ -5,10 +5,10 @@ use async_fs as fs;
 use async_process::Command;
 use iced::widget::image::Handle;
 
-use crate::get_video_files;
+use crate::app::{TILE_HEIGHT, TILE_WIDTH};
+use crate::file_operations::get_video_files;
 use crate::utils;
 use crate::weights::LastAccessible;
-use crate::{TILE_HEIGHT, TILE_WIDTH};
 
 /// Compute an md5 hash of the path, plus the ".png" extension
 fn compute_thumbnail_basename(path: &Path) -> Option<String> {
