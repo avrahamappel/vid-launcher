@@ -188,13 +188,13 @@ fn view(app: &App) -> Column<'_, Event> {
         .iter()
         .enumerate()
         .map(|(idx, show)| {
-            let tile = mouse_area(
-                image(app.default_image.clone())
-                    .width(TILE_WIDTH)
-                    .height(TILE_HEIGHT),
-            )
-            .on_enter(Event::EnteredTile(idx))
-            .on_exit(Event::ExitedTile(idx));
+            let handle = show
+                .thumbnail
+                .clone()
+                .unwrap_or_else(|| app.default_image.clone());
+            let tile = mouse_area(image(handle).width(TILE_WIDTH).height(TILE_HEIGHT))
+                .on_enter(Event::EnteredTile(idx))
+                .on_exit(Event::ExitedTile(idx));
 
             let hover_view = center(row![
                 button(" ▶️")
