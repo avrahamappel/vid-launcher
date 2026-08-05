@@ -13,7 +13,7 @@ use iced::{Task, Vector};
 use rand::prelude::*;
 
 use crate::shows::Show;
-use crate::thumbnails::load_thumbnail;
+use crate::thumbnails::{THUMBNAIL_HEIGHT, THUMBNAIL_WIDTH, load_thumbnail};
 use crate::utils::home_dir;
 use crate::{
     components::{centered, loading},
@@ -173,8 +173,8 @@ pub fn update(app: &mut App, event: Event) -> Task<Event> {
 }
 
 pub const TILES_PER_ROW: usize = 2;
-pub const TILE_WIDTH: u32 = 150;
-pub const TILE_HEIGHT: u32 = 100;
+pub const TILE_WIDTH: u32 = THUMBNAIL_WIDTH;
+pub const TILE_HEIGHT: u32 = THUMBNAIL_HEIGHT;
 #[expect(clippy::cast_possible_truncation)]
 pub const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
 

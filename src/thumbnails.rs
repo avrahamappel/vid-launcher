@@ -5,10 +5,12 @@ use async_fs as fs;
 use async_process::Command;
 use iced::widget::image::Handle;
 
-use crate::app::{TILE_HEIGHT, TILE_WIDTH};
 use crate::file_operations::get_video_files;
-use crate::utils;
+use crate::utils::home_dir;
 use crate::weights::LastAccessible;
+
+pub const THUMBNAIL_WIDTH: u32 = 150;
+pub const THUMBNAIL_HEIGHT: u32 = 100;
 
 /// Compute an md5 hash of the path, plus the ".png" extension
 fn compute_thumbnail_basename(path: &Path) -> Option<String> {
@@ -17,8 +19,6 @@ fn compute_thumbnail_basename(path: &Path) -> Option<String> {
 }
 
 pub async fn load_thumbnail(mut path: PathBuf) -> Option<Handle> {
-    let cache_dir = utils::home_dir().join(".cache");
-
     if path.is_dir() {
         // Use the most recently added video file within the directory
 
@@ -44,7 +44,13 @@ pub async fn load_thumbnail(mut path: PathBuf) -> Option<Handle> {
     let thumbnail_basename = compute_thumbnail_basename(&path)?;
 
     let app_thumbnail_path = {
-        let app_thumbnail_dir_path = cache_dir.join("vid-launcher/thumbnails");
+        let app_thumbnail_dir_path = home_dir()
+            .join(".cache")
+            .join("vid-launcher")
+            .join("thumbnails")
+            // THUMBNAIL_CACHE_KEY is generated in build.rs by hashing the current module
+            .join(env!("THUMBNAIL_CACHE_KEY"));
+
         if !app_thumbnail_dir_path.exists() {
             fs::create_dir_all(&app_thumbnail_dir_path)
                 .await
@@ -99,13 +105,13 @@ async fn generate_thumbnail(input: &Path, output: &Path) -> Result<(), std::io::
         .arg(input)
         // Explanation of ffmpeg filters:
         // 1. 20 seconds into the video, grab a thumbnail image from the next 200 frames
-        // 2. Scale it down to TILE_WIDTH x TILE_HEIGHT, increasing one of the dimensions if necessary
+        // 2. Scale it down to THUMBNAIL_WIDTH x THUMBNAIL_HEIGHT, increasing one of the dimensions if necessary
         // 3. Crop the final image to the exact tile proportions
         .arg("-ss")
         .arg("00:00:20")
         .arg("-vf")
         .arg(format!(
-            "thumbnail=n=200,scale={TILE_WIDTH}:{TILE_HEIGHT}:force_original_aspect_ratio=increase,crop={TILE_WIDTH}:{TILE_HEIGHT}"
+            "thumbnail=n=200,scale={THUMBNAIL_WIDTH}:{THUMBNAIL_HEIGHT}:force_original_aspect_ratio=increase,crop={THUMBNAIL_WIDTH}:{THUMBNAIL_HEIGHT}"
         ))
         .arg("-frames:v")
         .arg("1")
