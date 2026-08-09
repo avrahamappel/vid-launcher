@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::time::SystemTime;
 
 use async_fs as fs;
 use async_process::Command;
@@ -7,7 +8,6 @@ use iced::widget::image::Handle;
 
 use crate::file_operations::get_video_files;
 use crate::utils::home_dir;
-use crate::weights::LastAccessible;
 
 pub const THUMBNAIL_WIDTH: u32 = 150;
 pub const THUMBNAIL_HEIGHT: u32 = 100;
@@ -18,17 +18,21 @@ fn compute_thumbnail_basename(path: &Path) -> Option<String> {
     Some(format!("{hash:x}.png"))
 }
 
+/// Get last modified time of a file path
+fn last_modified(path: &Path) -> std::io::Result<SystemTime> {
+    path.metadata()?.modified()
+}
+
 pub async fn load_thumbnail(mut path: PathBuf) -> Option<Handle> {
     if path.is_dir() {
         // Use the most recently added video file within the directory
-
-        let mut files_and_last_accessed = get_video_files(&path)
+        let mut files_and_last_modified = get_video_files(&path)
             .into_iter()
-            .filter_map(|file| match file.last_accessed() {
-                Ok(last_accessed) => Some((file, last_accessed)),
+            .filter_map(|file| match last_modified(&file) {
+                Ok(last_modified) => Some((file, last_modified)),
                 Err(e) => {
                     eprintln!(
-                        "Path [{}]: getting last accessed time failed with: {e:?}",
+                        "Path [{}]: getting last modified time failed with: {e:?}",
                         file.display()
                     );
                     None
@@ -36,9 +40,9 @@ pub async fn load_thumbnail(mut path: PathBuf) -> Option<Handle> {
             })
             .collect::<Vec<_>>();
 
-        files_and_last_accessed.sort_by_key(|(_, last_accessed)| *last_accessed);
+        files_and_last_modified.sort_by_key(|(_, last_modified)| *last_modified);
 
-        path = files_and_last_accessed.pop()?.0;
+        path = files_and_last_modified.pop()?.0;
     }
 
     let thumbnail_basename = compute_thumbnail_basename(&path)?;
