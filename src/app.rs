@@ -175,8 +175,9 @@ pub fn update(app: &mut App, event: Event) -> Task<Event> {
 pub const TILES_PER_ROW: usize = 2;
 pub const TILE_WIDTH: u32 = THUMBNAIL_WIDTH;
 pub const TILE_HEIGHT: u32 = THUMBNAIL_HEIGHT;
+pub const TILE_SPACING: u32 = 2;
 #[expect(clippy::cast_possible_truncation)]
-pub const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32);
+pub const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32) + TILE_SPACING;
 
 pub fn view(app: &App) -> Column<'_, Event> {
     let list = app
@@ -204,7 +205,9 @@ pub fn view(app: &App) -> Column<'_, Event> {
             hover(tile, hover_view)
         })
         .collect::<Row<_>>()
-        .wrap();
+        .spacing(TILE_SPACING)
+        .wrap()
+        .vertical_spacing(TILE_SPACING);
 
     let mut root = column![list];
 
