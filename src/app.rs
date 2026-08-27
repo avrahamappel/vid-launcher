@@ -7,9 +7,9 @@ use iced::widget::button::secondary;
 use iced::widget::container::{danger, rounded_box};
 use iced::widget::image::Handle;
 use iced::widget::{
-    Column, Row, button, center, column, container, float, hover, image, mouse_area, row,
+    Row, button, center, column, container, float, hover, image, mouse_area, row, scrollable,
 };
-use iced::{Task, Vector};
+use iced::{Element, Task, Vector};
 use rand::prelude::*;
 
 use crate::shows::Show;
@@ -179,7 +179,7 @@ pub const TILE_SPACING: u32 = 2;
 #[expect(clippy::cast_possible_truncation)]
 pub const WINDOW_WIDTH: u32 = TILE_WIDTH * (TILES_PER_ROW as u32) + TILE_SPACING;
 
-pub fn view(app: &App) -> Column<'_, Event> {
+pub fn view(app: &App) -> impl Into<Element<'_, Event>> {
     let list = app
         .shows
         .iter()
@@ -232,5 +232,5 @@ pub fn view(app: &App) -> Column<'_, Event> {
             container(error.as_str()).style(danger).padding(15),
         ));
     }
-    root
+    scrollable(root)
 }
